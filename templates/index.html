@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1> {% block title %} Control {% endblock %}</h1>
+
+{% for device in devices %}
+	
+<button id="{{device['id']}}" onclick="toggle({{device['id']}})"class="{{device['cssActivationClass']}} {{device['enabled']}}">{{device['title']}}</button>
+
+{% endfor %}
+
+<p id="messageBoard"></p>
+
+{% endblock %}

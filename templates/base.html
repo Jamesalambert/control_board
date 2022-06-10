@@ -1,0 +1,27 @@
+<html>
+ 
+<head>
+    <title> {% block title %} {% endblock %} - Test </title>
+    <link rel="stylesheet" href="{{url_for('static',filename='styles/styles.css')}}">
+</head>
+
+<body>
+<img width="200px" src="{{url_for('static',filename='pulsar_logo.svg')}}">
+
+  <nav>
+    <a href="{{ url_for('index')}}">Control</a>
+    <a href="{{ url_for('setup')}}">Setup</a>
+  </nav>
+  
+  <hr>
+
+  <div class="content">
+    {% block content %} {% endblock %}
+  </div>
+
+  <hr>
+    <script src="{{url_for('static',filename='jquery.js')}}"></script>
+    <script src="{{url_for('static',filename='script.js')}}"></script>
+</body>
+
+</html>

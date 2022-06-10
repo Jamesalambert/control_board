@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1> {% block title %} Setup {% endblock %}</h1>
+
+<div>
+
+{% for device in devices %}
+    <form class="setupMenu">
+    <div >
+    <h2>{{device['title']}}</h2>
+
+    <label for="one">1</label>
+    <input type="radio" id="1" name="port" value="1"><br>
+    
+    <label for="two">2</label>
+    <input type="radio" id="2" name="port" value="{{device['id']}}"><br>
+    
+    <label for="three">3</label>
+    <input type="radio" id="3" name="port" value="{{device['id']}}"><br>
+    
+    <label for="four">4</label>
+    <input type="radio" id="4" name="port" value="{{device['id']}}"><br>
+    
+    <label for="five">5</label>
+    <input type="radio" id="5" name="port" value="{{device['id']}}"><br>
+    
+    <label for="six">6</label>
+    <input type="radio" id="6" name="port" value="{{device['id']}}"><br>
+    </div>
+    </form>
+{% endfor %}
+
+</div>
+
+
+{% endblock %}
