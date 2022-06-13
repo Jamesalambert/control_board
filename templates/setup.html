@@ -3,35 +3,35 @@
 {% block content %}
 <h1> {% block title %} Setup {% endblock %}</h1>
 
-<div>
+
 
 {% for device in devices %}
-    <form class="setupMenu">
-    <div >
-    <h2>{{device['title']}}</h2>
-
-    <label for="one">1</label>
-    <input type="radio" id="1" name="port" value="1"><br>
-    
-    <label for="two">2</label>
-    <input type="radio" id="2" name="port" value="{{device['id']}}"><br>
-    
-    <label for="three">3</label>
-    <input type="radio" id="3" name="port" value="{{device['id']}}"><br>
-    
-    <label for="four">4</label>
-    <input type="radio" id="4" name="port" value="{{device['id']}}"><br>
-    
-    <label for="five">5</label>
-    <input type="radio" id="5" name="port" value="{{device['id']}}"><br>
-    
-    <label for="six">6</label>
-    <input type="radio" id="6" name="port" value="{{device['id']}}"><br>
+    <div class="setupMenu" >
+        <h2>{{device['title']}}</h2>
+        <p>id: {{device['id']}}</p>
+        <p>activation: {{device['activation']}}</p>
+        <p>channel: {{device['channel']}}</p>
+        
+        <div>
+            <button onclick="updateChannel({{device['id']}}, 1)">1</button>
+            <button onclick="updateChannel({{device['id']}}, 2)">2</button>
+            <button onclick="updateChannel({{device['id']}}, 3)">3</button>
+            <button onclick="updateChannel({{device['id']}}, 4)">4</button>
+            <button onclick="updateChannel({{device['id']}}, 5)">5</button>
+            <button onclick="updateChannel({{device['id']}}, 6)">6</button>
+        </div>
+        
+       <!-- 
+ <form method="post">
+            <label for="newChannel">New Channel</label>
+            <input type="text" name="newChannel">
+            <input type="submit" value="update">
+        </form>
+ -->
     </div>
-    </form>
 {% endfor %}
 
-</div>
+<script src="{{url_for('static',filename='setup_script.js')}}"></script>
 
 
 {% endblock %}

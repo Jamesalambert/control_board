@@ -42,22 +42,30 @@ class Feed():
 
 # Command logic ____________________________
     @staticmethod
-    def commandFrom(data):
+    def commandFrom(commandData):
+        """
+        returned values will be sent to the serial device
+        """
         try:
-            intent, deviceID = Feed.__intentFromString(data)
+            intent = Feed.__intentFromString(commandData)
         except:
             return None
+            
         if intent == "toggle":
-            command = Feed.getToggleCommandFor(deviceID)
-#             temporary______________
-            Feed.updateDB(*command)
-#             remove!!!!!
+            command = Feed.__getToggleCommandFor(commandData)
+            Feed.__recordActivation(*command)
             return command
+        elif intent == "updateChannel":
+            command = Feed.__getChannelUpdateCommandFor(commandData)
+            Feed.__recordChannel(*command)
+            return None
         else:
             return None
             
     @staticmethod
-    def getToggleCommandFor(deviceID):
+    def __getToggleCommandFor(commandData):
+        print(f"DEBUG: {commandData}")
+        deviceID = int(commandData.split(",")[1])
         if not deviceID in Feed.allowedDeviceIDs():
             return
         
@@ -67,46 +75,52 @@ class Feed():
             activation = 1
         else:
             activation = 0
+        conn.close()
         return deviceID, activation
-            
+    
     @staticmethod
-    def allowedDeviceIDs():
-        return {e.value for e in Feed.state().value}
+    def __getChannelUpdateCommandFor(commandData):
+        deviceID, newChannel = commandData.split(",")[1:3]
+        return deviceID, newChannel
+
     
     @staticmethod
     def __intentFromString(data):
         try:
-            data = data.split(",")[:2]
-            return (data[0], int(data[1]))
+            data = data.split(",")
+            return data[0]
         except:
             return None
         
+    @staticmethod
+    def allowedDeviceIDs():
+        return {e.value for e in Feed.state().value}
     
 # Database actions ___________________________
-    @staticmethod
-    def toggle(deviceID):
-        conn = Feed.__getDBConnection()
-        
-        currentActivation = Feed.__activationFor(deviceID, conn)
-        if currentActivation == 0 :
-            Feed.__setActivation(1, deviceID, conn)
-        else:
-            Feed.__setActivation(0, deviceID, conn)
-
-        conn.commit()
-        conn.close() 
-
-    # @staticmethod
-#     def synchroniseDevicesToDB():
-#         deviceStates = Feed.__getDeviceStates()
-#         for deviceData in deviceStates:
-#             Hardware.setActivation(deviceData['activation'], deviceData['id'])
-#         return
+#     @staticmethod
+#     def toggle(deviceID):
+#         conn = Feed.__getDBConnection()
+#         
+#         currentActivation = Feed.__activationFor(deviceID, conn)
+#         if currentActivation == 0 :
+#             Feed.__setActivation(1, deviceID, conn)
+#         else:
+#             Feed.__setActivation(0, deviceID, conn)
+# 
+#         conn.commit()
+#         conn.close()
 
     @staticmethod
-    def updateDB(deviceID, activation):
+    def __recordActivation(deviceID, activation):
         conn = Feed.__getDBConnection()
         Feed.__setActivation(activation, deviceID, conn)
+        conn.commit()
+        conn.close()
+        
+    @staticmethod
+    def __recordChannel(deviceID, newChannel):
+        conn = Feed.__getDBConnection()
+        Feed.__setChannel(deviceID, newChannel, conn)
         conn.commit()
         conn.close()
     
@@ -137,5 +151,10 @@ class Feed():
     def __setActivation(activation, deviceID, conn):
         conn.execute(f'UPDATE devices SET activation = {activation} WHERE id is {deviceID}')
         print(f"updating database: {activation} for device {deviceID}")
+        
+    @staticmethod
+    def __setChannel(deviceID, newChannel, conn):
+        conn.execute("UPDATE devices set channel = ? WHERE id is ?", (newChannel, deviceID))
+        print(f"updated db, set device {deviceID} to channel: {newChannel}")
 
 

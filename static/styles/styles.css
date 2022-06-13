@@ -7,8 +7,14 @@ body {
 }
 
 nav {
-    padding-top: 10px;
+    padding-top: 20px;
 /*     padding-bottom: 10px; */
+}
+
+nav > a {
+    color: blue;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 button {
@@ -16,6 +22,7 @@ button {
 	padding: 20px;
 	color: white;
 	font-size: 20pt;
+	border-radius: 8px;
 }
 
 button.off{
@@ -33,5 +40,4 @@ button.disabled{
 .setupMenu {
     display: inline-block;
     padding: 20px;
-    
 }
