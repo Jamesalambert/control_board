@@ -59,7 +59,7 @@ def serialToQueue(serialConnection, outputQueue, stopEvent):
     while not stopEvent.is_set():
         if not serialConnection == None:
             data = serialWorker.read(serialConnection)
-            print(f"serialToQueue got: {data}")
+#             print(f"serialToQueue got: {data}")
             outputQueue.put(data)
         time.sleep(0.1)
     serialConnection.close()

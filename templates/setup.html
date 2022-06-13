@@ -6,19 +6,19 @@
 
 
 {% for device in devices %}
-    <div class="setupMenu" >
+    <div class="deviceMenu" >
         <h2>{{device['title']}}</h2>
         <p>id: {{device['id']}}</p>
         <p>activation: {{device['activation']}}</p>
-        <p>channel: {{device['channel']}}</p>
+<!--         <p>channel: {{device['channel']}}</p> -->
         
-        <div>
-            <button onclick="updateChannel({{device['id']}}, 1)">1</button>
-            <button onclick="updateChannel({{device['id']}}, 2)">2</button>
-            <button onclick="updateChannel({{device['id']}}, 3)">3</button>
-            <button onclick="updateChannel({{device['id']}}, 4)">4</button>
-            <button onclick="updateChannel({{device['id']}}, 5)">5</button>
-            <button onclick="updateChannel({{device['id']}}, 6)">6</button>
+        <div class="setChannelButtons">
+            <button id="{{device['id']}}-{{device['channel']}}" class="1" onclick="updateChannel({{device['id']}}, 1)">1</button>
+            <button id="{{device['id']}}-{{device['channel']}}" class="2" onclick="updateChannel({{device['id']}}, 2)">2</button>
+            <button id="{{device['id']}}-{{device['channel']}}" class="3" onclick="updateChannel({{device['id']}}, 3)">3</button>
+            <button id="{{device['id']}}-{{device['channel']}}" class="4" onclick="updateChannel({{device['id']}}, 4)">4</button>
+            <button id="{{device['id']}}-{{device['channel']}}" class="5" onclick="updateChannel({{device['id']}}, 5)">5</button>
+            <button id="{{device['id']}}-{{device['channel']}}" class="6" onclick="updateChannel({{device['id']}}, 6)">6</button>
         </div>
         
        <!-- 
