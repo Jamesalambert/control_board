@@ -10,12 +10,6 @@ socket.addEventListener('message', ev => {
         }
         
         displayChannelSettings();
-        
-        // $('.setChannelButtons > button').attr('class', 'off');
-//                     
-//         for (const device of devices){
-//             $('#' + device['id'] + '-' + device['channel'] + '-' + device['channel']).attr('class', 'on');
-//         }
 });
 
 function displayChannelSettings(){
