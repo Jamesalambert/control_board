@@ -32,13 +32,6 @@ def incomingSocketMessage(sock):
 def setup():  #Flask view function
     return render_template('setup.html', devices=Feed.description())
 
-# @app.route('/setup', methods=['POST'])
-# def updateDeviceChannel():
-#     deviceID  = request.args.get('deviceID', None)
-#     newChannel = request.form['newChannel']
-#     print(f"updating device {deviceID}, to channel {newChannel}")
-#     return render_template('setup.html', devices=Feed.description())
-
 
 # queues to serial____and vice versa______________________________
 

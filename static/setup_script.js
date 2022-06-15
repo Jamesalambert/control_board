@@ -16,7 +16,6 @@ function displayChannelSettings(){
     $('.setChannelButtons > button').each( function(index, button){
         const channel = $(button).attr('id').split("-")[1];
         const targetClass = $(button).attr('class').split(" ")[0];
-        console.log(`${channel} ${targetClass}`);
         if (channel == targetClass){
             $(button).addClass('on');
             $(button).removeClass('off');

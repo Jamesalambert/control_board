@@ -1,8 +1,14 @@
 DROP TABLE IF EXISTS devices;
+DROP TABLE IF EXISTS outputs;
 
 CREATE TABLE devices (
        id INTEGER PRIMARY KEY AUTOINCREMENT,
        title TEXT NOT NULL,
-       activation BOOL NOT NULL,
        channel INTEGER NOT NULL
+);
+
+CREATE TABLE outputs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel INTEGER NOT NULL,
+    activation INTEGER NOT NULL
 );

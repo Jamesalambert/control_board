@@ -18,9 +18,9 @@ def getSerialConnection():
 def write(conn, command):
     commandBytes = startSym.encode('ascii') + bytes(command) + endSym.encode('ascii')
     numberOfBytesSent = conn.write(commandBytes)
-    print(f"serialWorker sent {numberOfBytesSent} bytes: {commandBytes}")
+#     print(f"serialWorker sent {numberOfBytesSent} bytes: {commandBytes}")
     
 def read(conn):
     data = conn.readline().strip()
-    print(f"serialWorker read {len(data)}: {data}")
+#     print(f"serialWorker read {len(data)}: {data}")
     return data    

@@ -1,7 +1,7 @@
 body {
 	font-family: Sans-Serif;
 	margin: auto;
-    width: 800px;
+    width: 900px;
     padding-top: 30px;
     text-align: center;
 }
@@ -37,7 +37,25 @@ button.disabled{
 	background-color: grey;
 }
 
+
+/* Setup page */
+
 .deviceMenu {
     display: inline-block;
     padding: 20px;
+}
+
+.setChannelButtons > button {
+    padding: 10px;
+    margin: 0;
+}
+
+.deviceMenu {
+    background: rgb(240, 240, 240);
+    margin: 10px;
+    border-radius: 12px;
+}
+
+.deviceMenu p {
+    text-align: left;
 }

@@ -7,11 +7,10 @@
 
 {% for device in devices %}
     <div class="deviceMenu" >
-        <h2>{{device['title']}}</h2>
-        <p>id: {{device['id']}}</p>
+        <h2>{{device['id']}}. {{device['title']}}</h2>
         <p>activation: {{device['activation']}}</p>
-<!--         <p>channel: {{device['channel']}}</p> -->
         
+        <p>connected to channel:</p>
         <div class="setChannelButtons">
             <button id="{{device['id']}}-{{device['channel']}}" class="1" onclick="updateChannel({{device['id']}}, 1)">1</button>
             <button id="{{device['id']}}-{{device['channel']}}" class="2" onclick="updateChannel({{device['id']}}, 2)">2</button>

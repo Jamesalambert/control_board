@@ -6,7 +6,11 @@
 
 {% for device in devices %}
 	
-<button id="{{device['id']}}" onclick="toggle({{device['id']}})"class="{{device['cssActivationClass']}} {{device['enabled']}}">{{device['title']}}</button>
+<button id="{{device['id']}}" 
+        onclick="toggle({{device['id']}})"
+        class="{{device['cssActivationClass']}} {{device['enabled']}}">
+            {{device['title']}}
+</button>
 
 {% endfor %}
 

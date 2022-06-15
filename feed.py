@@ -14,12 +14,13 @@ class FeedState(Enum):
     ARMED   = set(Device)
 
 class Feed():
+# =============Public==================
 # State _______________________________
     @staticmethod
     def description():
         deviceList = Feed.__getDeviceStates()
         for d in deviceList:
-            if d['id'] in Feed.allowedDeviceIDs():
+            if d['id'] in Feed.__allowedDeviceIDs():
                 if d['activation'] == 1:
                     d['cssActivationClass'] = "on"
                 else:
@@ -36,9 +37,11 @@ class Feed():
             return FeedState.ARMED
         else:
             return FeedState.SAFE
-    
-    
-        
+ 
+    @staticmethod
+    def __allowedDeviceIDs():
+        return {e.value for e in Feed.state().value}
+
 
 # Command logic ____________________________
     @staticmethod
@@ -62,21 +65,29 @@ class Feed():
         else:
             return None
             
+            
+#  =================Private==================     
     @staticmethod
     def __getToggleCommandFor(commandData):
-        print(f"DEBUG: {commandData}")
-        deviceID = int(commandData.split(",")[1])
-        if not deviceID in Feed.allowedDeviceIDs():
+        deviceID = commandData.split(",")[1]
+        if not int(deviceID) in Feed.__allowedDeviceIDs():
             return
         
         conn = Feed.__getDBConnection()
+        
+#       check if any other devices share the same channel, if they do, toggle them too
+#       since they will be toggled on/off in hardware.
+        channel = Feed.__getChannelFor(deviceID, conn)
+        otherDevicesInSameChannel = Feed.__devicesSharingChannelWith(deviceID, conn)
         currentActivation = Feed.__activationFor(deviceID, conn)
+        
         if currentActivation == 0:
             activation = 1
         else:
             activation = 0
+
         conn.close()
-        return deviceID, activation
+        return channel, activation
     
     @staticmethod
     def __getChannelUpdateCommandFor(commandData):
@@ -91,29 +102,13 @@ class Feed():
             return data[0]
         except:
             return None
-        
-    @staticmethod
-    def allowedDeviceIDs():
-        return {e.value for e in Feed.state().value}
-    
-# Database actions ___________________________
-#     @staticmethod
-#     def toggle(deviceID):
-#         conn = Feed.__getDBConnection()
-#         
-#         currentActivation = Feed.__activationFor(deviceID, conn)
-#         if currentActivation == 0 :
-#             Feed.__setActivation(1, deviceID, conn)
-#         else:
-#             Feed.__setActivation(0, deviceID, conn)
-# 
-#         conn.commit()
-#         conn.close()
 
+
+# Database actions ___________________________
     @staticmethod
-    def __recordActivation(deviceID, activation):
+    def __recordActivation(channel, activation):
         conn = Feed.__getDBConnection()
-        Feed.__setActivation(activation, deviceID, conn)
+        Feed.__setActivation(activation, channel, conn)
         conn.commit()
         conn.close()
         
@@ -126,7 +121,6 @@ class Feed():
     
 
 # Private ---------------------
-
     @staticmethod
     def __getDBConnection():
         conn = sqlite3.connect('database.db')
@@ -137,24 +131,52 @@ class Feed():
     def __getDeviceStates():
         conn = Feed.__getDBConnection()
         cur = conn.cursor()
-        cur.execute('select * from devices')
+        cur.execute("select * from devices, outputs where devices.channel = outputs.channel;")
         deviceStates = [dict(row) for row in cur]
         conn.close()
         return deviceStates
 
     @staticmethod
+    def __getChannelFor(deviceID, conn):
+        command = "select channel from devices where id = ?"
+        row = conn.execute(command, deviceID).fetchone()
+        return row['channel']
+
+    @staticmethod
+    def __devicesSharingChannelWith(deviceID, conn):
+        command = """
+select devices.id from devices, outputs
+where devices.channel = outputs.channel
+and devices.id = ?;
+"""
+        ids = conn.execute(command, deviceID).fetchall()
+        ids = [e['id'] for e in ids]
+        print(f"found these devices: {ids} {type(ids)}")
+        return ids
+
+    @staticmethod
     def __activationFor(deviceID, conn):
-        row = conn.execute(f"select * from devices where id is {deviceID}").fetchone()
-        return row['activation']
+        command = """
+select activation
+from devices, outputs
+where devices.channel = outputs.channel
+and devices.id = ?;
+"""
+        activations = conn.execute(command, deviceID).fetchone()
+        print(f"db got activation: {activations['activation']}")
+        return activations['activation']
     
     @staticmethod
-    def __setActivation(activation, deviceID, conn):
-        conn.execute(f'UPDATE devices SET activation = {activation} WHERE id is {deviceID}')
-        print(f"updating database: {activation} for device {deviceID}")
+    def __setActivation(activation, channel, conn):
+        command = "update outputs set activation = ? where channel = ?;"
+        conn.execute(command, [str(activation), str(channel)])
+
+        print(f"updating database: {activation} for channel: {channel}")
         
     @staticmethod
     def __setChannel(deviceID, newChannel, conn):
         conn.execute("UPDATE devices set channel = ? WHERE id is ?", (newChannel, deviceID))
         print(f"updated db, set device {deviceID} to channel: {newChannel}")
+
 
 
