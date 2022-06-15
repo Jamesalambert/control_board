@@ -1,5 +1,6 @@
 $(document).ready(displayChannelSettings);
 
+
 socket.addEventListener('message', ev => {
         const devices = JSON.parse(ev.data);
         

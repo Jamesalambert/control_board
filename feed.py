@@ -56,8 +56,11 @@ class Feed():
             
         if intent == "toggle":
             command = Feed.__getToggleCommandFor(commandData)
-            Feed.__recordActivation(*command)
-            return command
+            if not command == None:
+                Feed.__recordActivation(*command)
+                return command
+            else:
+                return None
         elif intent == "updateChannel":
             command = Feed.__getChannelUpdateCommandFor(commandData)
             Feed.__recordChannel(*command)
@@ -71,7 +74,7 @@ class Feed():
     def __getToggleCommandFor(commandData):
         deviceID = commandData.split(",")[1]
         if not int(deviceID) in Feed.__allowedDeviceIDs():
-            return
+            return None
         
         conn = Feed.__getDBConnection()
         
@@ -151,7 +154,6 @@ and devices.id = ?;
 """
         ids = conn.execute(command, deviceID).fetchall()
         ids = [e['id'] for e in ids]
-        print(f"found these devices: {ids} {type(ids)}")
         return ids
 
     @staticmethod
