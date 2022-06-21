@@ -37,11 +37,16 @@ class Feed():
             return FeedState.ARMED
         else:
             return FeedState.SAFE
+        
  
     @staticmethod
     def __allowedDeviceIDs():
         return {e.value for e in Feed.state().value}
 
+    @staticmethod
+    def commandsFromSerial(data):
+        if len(data) > 0:
+            print(f"Feed got serial data: {data}")
 
 # Command logic ____________________________
     @staticmethod

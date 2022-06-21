@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request
 from flask_sock import Sock
-import threading, multiprocessing
+import threading, multiprocessing, queue
 import serialWorker
 import time
 from feed import Feed
@@ -11,8 +11,10 @@ THREAD_SLEEP_TIME = 0.01
 
 app = Flask(__name__)
 webSocket = Sock(app)
-inputQueue = multiprocessing.Queue(100) #maximum number of items int the queue
-outputQueue = multiprocessing.Queue(100)
+# inputQueue = multiprocessing.Queue(100) #maximum number of items int the queue
+# outputQueue = multiprocessing.Queue(100)
+inputQueue = queue.Queue(100) #maximum number of items int the queue
+outputQueue = queue.Queue(100)
 
 # Flask routes____________________________________________________
 @app.route('/')
@@ -54,7 +56,7 @@ def queueToSerial(inputQueue, serialConnection, stopEvent):
 
 def serialToQueue(serialConnection, outputQueue, stopEvent):
     while not stopEvent.is_set():
-        if not serialConnection == None:
+        if serialConnection != None:
             data = serialWorker.read(serialConnection)
 #             print(f"serialToQueue got: {data}")
             outputQueue.put(data)
@@ -64,14 +66,15 @@ def serialToQueue(serialConnection, outputQueue, stopEvent):
             
 def checkHardwareResponses(queue, stopEvent):
     while not stopEvent.is_set():
+        accumulator = []
         if not queue.empty():
 #             set_trace() #breakpoint
-            recievedBytes = queue.get()
-#             print(f"from hardware: {recievedBytes}")
-            repeatedCommand = [int(c) for c in recievedBytes]
-            if len(repeatedCommand) == 2:
-                print(f"repeatedCommand: {repeatedCommand}")
-#                 Feed.updateDB(*repeatedCommand)                
+            accumulator.append(queue.get())
+        repeatedCommands = Feed.commandsFromSerial(accumulator)
+        if repeatedCommands != None:
+            for command in repeatedCommands:
+                print(f"repeatedCommand: {command}")
+#       Feed.updateDB(repeatedCommands)                
         time.sleep(THREAD_SLEEP_TIME)
 # -----------------------------------------------------------------
 
@@ -93,20 +96,20 @@ if __name__ == '__main__':
     # tread for reading serial and sending to socket
     p2 = threading.Thread(target=serialToQueue, args=(serialConn, outputQueue, stopEvent), daemon=True)
     # thread for printing Arduino output
-    p3 = threading.Thread(target=checkHardwareResponses, args=(outputQueue,stopEvent), daemon=True)
+#     p3 = threading.Thread(target=checkHardwareResponses, args=(outputQueue, stopEvent), daemon=True)
 
 
     try:
         # go!
         p1.start()
         p2.start()
-        p3.start()
+#         p3.start()
         app.run(debug=True, port=80, host='0.0.0.0')
     except:
         stopEvent.set()
         print("stopping...")
         
     stopEvent.set()
-    
     serialConn.close()
+    
     print("finished")

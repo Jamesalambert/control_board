@@ -22,12 +22,12 @@ def getSerialConnection():
 def write(conn, command):
     commandBytes = startSym.encode('ascii') + bytes(command) + endSym.encode('ascii')
     numberOfBytesSent = conn.write(commandBytes)
-    print(f"serialWorker sent {numberOfBytesSent} bytes: {commandBytes}")
+#     print(f"serialWorker sent {numberOfBytesSent} bytes: {commandBytes}")
     
 def read(conn):
     data = conn.read_until(expected='\r\n')
-    if len(data) != 0:
-        print(f"serialWorker read {len(data)}: {data}")
+    # if len(data) != 0:
+#         print(f"serialWorker read {len(data)}: {data}")
     return data
     
 def status(conn):
