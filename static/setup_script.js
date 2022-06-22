@@ -6,11 +6,12 @@ socket.addEventListener('message', ev => {
         
 //         highlight correct channels without waiting for a page reload
         for (const device of devices){
-            $(`[id^=${device['id']}]`).each(function(i, button){
-                $(button).attr('id', `${device['id']}-${device['channel']}`);
+            const deviceID = device['id'];
+            const channel = device['channel'];
+            $(`[id^=${deviceID}-]`).each(function(i, button){
+                $(button).attr('id', `${deviceID}-${channel}`);
             });
         }
-        
         displayChannelSettings();
 });
 

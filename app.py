@@ -33,16 +33,22 @@ def incomingSocketMessage(sock):
         sock.send(json.dumps(Feed.description()))
 
 @app.route('/setup', methods=['GET'])
-def setup():  #Flask view function
-#     check if we're deleting a device
-    if request.args.get("intent") == "delete":
-        Feed.removeDevice(request.args.get("deviceID"))
+def setup():
     return render_template('setup.html', devices=Feed.description())
 
 @app.route('/setup', methods=['POST'])
-def addDeviceForm():
-    deviceTitle = request.form['newDeviceTitle']
-    Feed.recordNewDevice(deviceTitle)
+def deviceActions():
+    try:
+        deviceTitle = request.form['newDeviceTitle']
+        Feed.recordNewDevice(deviceTitle)
+    except KeyError:
+        pass
+    try:
+        deviceToDelete = request.form['deviceToDelete']
+        print(f"server: about to delete {deviceToDelete}")
+        Feed.removeDevice(deviceToDelete)
+    except KeyError:
+        pass
     return render_template('setup.html', devices=Feed.description())
 
 # queues to serial____and vice versa______________________________

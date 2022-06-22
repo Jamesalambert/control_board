@@ -142,16 +142,6 @@ class Feed():
         conn = sqlite3.connect('database.db')
         conn.row_factory = sqlite3.Row #python dicts
         return conn
-
-    # @staticmethod
-#     def __getDeviceStates():
-#         conn = Feed.__getDBConnection()
-#         cur = conn.cursor()
-#         cur.execute("select * from devices, outputs where devices.channel = outputs.channel;")
-#         deviceStates = [dict(row) for row in cur]
-#         conn.close()
-#         return deviceStates
-        
         
     @staticmethod
     def __getDeviceStates():
