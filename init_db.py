@@ -14,7 +14,7 @@ Type anything else and the press enter to stop.
 """
 
 
-answer = raw_input(WARNING)
+answer = input(WARNING)
 print(answer)
 shouldContinue = answer.strip().lower() == "reset"
 

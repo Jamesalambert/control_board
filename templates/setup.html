@@ -3,7 +3,14 @@
 {% block content %}
 <h1> {% block title %} Setup {% endblock %}</h1>
 
-
+<div id="addDeviceform">
+    <h2>add a device</h2>
+    <form action="/setup" method="post">
+        <label for="newDeviceTitle">Title</label>
+        <input type="text" name="newDeviceTitle" id="newDeviceTitle" required>
+        <input type="submit" value="add">
+    </form>
+</div>
 
 {% for device in devices %}
     <div class="deviceMenu" >
@@ -19,14 +26,7 @@
             <button id="{{device['id']}}-{{device['channel']}}" class="5" onclick="updateChannel({{device['id']}}, 5)">5</button>
             <button id="{{device['id']}}-{{device['channel']}}" class="6" onclick="updateChannel({{device['id']}}, 6)">6</button>
         </div>
-        
-       <!-- 
- <form method="post">
-            <label for="newChannel">New Channel</label>
-            <input type="text" name="newChannel">
-            <input type="submit" value="update">
-        </form>
- -->
+        <a href="/setup/deleteDevice/{{device['id']}}">delete</a>
     </div>
 {% endfor %}
 

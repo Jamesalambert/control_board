@@ -4,6 +4,7 @@ $(document).ready(displayChannelSettings);
 socket.addEventListener('message', ev => {
         const devices = JSON.parse(ev.data);
         
+//         highlight correct channels without waiting for a page reload
         for (const device of devices){
             $(`[id^=${device['id']}]`).each(function(i, button){
                 $(button).attr('id', `${device['id']}-${device['channel']}`);

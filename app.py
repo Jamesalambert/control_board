@@ -11,8 +11,6 @@ THREAD_SLEEP_TIME = 0.01
 
 app = Flask(__name__)
 webSocket = Sock(app)
-# inputQueue = multiprocessing.Queue(100) #maximum number of items int the queue
-# outputQueue = multiprocessing.Queue(100)
 inputQueue = queue.Queue(100) #maximum number of items int the queue
 outputQueue = queue.Queue(100)
 
@@ -38,18 +36,29 @@ def incomingSocketMessage(sock):
 def setup():  #Flask view function
     return render_template('setup.html', devices=Feed.description())
 
+@app.route('/setup', methods=['POST'])
+def addDeviceForm():
+    deviceTitle = request.form['newDeviceTitle']
+    Feed.recordNewDevice(deviceTitle)
+    return render_template('setup.html', devices=Feed.description())
+    
+@app.route('/setup/deleteDevice/<deviceID>', methods=["GET"])
+def deleteDevice(deviceID):
+    Feed.removeDevice(deviceID)
+    return render_template('setup.html', devices=Feed.description())
+
 
 # queues to serial____and vice versa______________________________
 
 def queueToSerial(inputQueue, serialConnection, stopEvent):
     while not stopEvent.is_set():
-        while True:
-            if not inputQueue.empty():
-                command = inputQueue.get()
-                print(f"commandToSerial: {command}")
-                if not serialConnection == None and not command == None:
-                    serialWorker.write(serialConnection, command)            
-            time.sleep(THREAD_SLEEP_TIME)
+#         while True:
+        if not inputQueue.empty():
+            command = inputQueue.get()
+            print(f"commandToSerial: {command}")
+            if not serialConnection == None and not command == None:
+                serialWorker.write(serialConnection, command)            
+        time.sleep(THREAD_SLEEP_TIME)
     serialConnection.close()
     print("inputQueue: stopped serial Connection.")
         

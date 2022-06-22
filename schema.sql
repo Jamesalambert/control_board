@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS outputs;
 CREATE TABLE devices (
        id INTEGER PRIMARY KEY AUTOINCREMENT,
        title TEXT NOT NULL,
-       channel INTEGER NOT NULL
+       channel INTEGER
 );
 
 CREATE TABLE outputs (

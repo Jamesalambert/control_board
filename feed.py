@@ -28,7 +28,7 @@ class Feed():
             else:
                 d['cssActivationClass'] = "disabled"
         return deviceList
-    
+
     @staticmethod
     def state():
         devList = Feed.__getDeviceStates()
@@ -37,14 +37,15 @@ class Feed():
             return FeedState.ARMED
         else:
             return FeedState.SAFE
-        
- 
+
     @staticmethod
     def __allowedDeviceIDs():
         return {e.value for e in Feed.state().value}
 
     @staticmethod
     def commandsFromSerial(data):
+#     todo: this will receive the repeated commands from the arduino,
+#     turn the data into commands, and then commit those commands to the database.
         if len(data) > 0:
             print(f"Feed got serial data: {data}")
 
@@ -72,23 +73,19 @@ class Feed():
             return None
         else:
             return None
-            
-            
+
 #  =================Private==================     
     @staticmethod
     def __getToggleCommandFor(commandData):
         deviceID = commandData.split(",")[1]
         if not int(deviceID) in Feed.__allowedDeviceIDs():
             return None
-        
+
         conn = Feed.__getDBConnection()
-        
-#       check if any other devices share the same channel, if they do, toggle them too
-#       since they will be toggled on/off in hardware.
+
         channel = Feed.__getChannelFor(deviceID, conn)
-        otherDevicesInSameChannel = Feed.__devicesSharingChannelWith(deviceID, conn)
         currentActivation = Feed.__activationFor(deviceID, conn)
-        
+
         if currentActivation == 0:
             activation = 1
         else:
@@ -96,13 +93,12 @@ class Feed():
 
         conn.close()
         return channel, activation
-    
+
     @staticmethod
     def __getChannelUpdateCommandFor(commandData):
         deviceID, newChannel = commandData.split(",")[1:3]
         return deviceID, newChannel
 
-    
     @staticmethod
     def __intentFromString(data):
         try:
@@ -111,7 +107,6 @@ class Feed():
         except:
             return None
 
-
 # Database actions ___________________________
     @staticmethod
     def __recordActivation(channel, activation):
@@ -119,14 +114,27 @@ class Feed():
         Feed.__setActivation(activation, channel, conn)
         conn.commit()
         conn.close()
-        
+
     @staticmethod
     def __recordChannel(deviceID, newChannel):
         conn = Feed.__getDBConnection()
         Feed.__setChannel(deviceID, newChannel, conn)
         conn.commit()
         conn.close()
-    
+        
+    @staticmethod
+    def recordNewDevice(title):
+        conn = Feed.__getDBConnection()
+        Feed.__addDevice(title, conn)
+        conn.commit()
+        conn.close()
+        
+    @staticmethod
+    def removeDevice(deviceID):
+        conn = Feed.__getDBConnection()
+        Feed.__deleteDevice(deviceID, conn)
+        conn.commit()
+        conn.close()
 
 # Private ---------------------
     @staticmethod
@@ -134,32 +142,31 @@ class Feed():
         conn = sqlite3.connect('database.db')
         conn.row_factory = sqlite3.Row #python dicts
         return conn
+
+    # @staticmethod
+#     def __getDeviceStates():
+#         conn = Feed.__getDBConnection()
+#         cur = conn.cursor()
+#         cur.execute("select * from devices, outputs where devices.channel = outputs.channel;")
+#         deviceStates = [dict(row) for row in cur]
+#         conn.close()
+#         return deviceStates
+        
         
     @staticmethod
     def __getDeviceStates():
         conn = Feed.__getDBConnection()
         cur = conn.cursor()
-        cur.execute("select * from devices, outputs where devices.channel = outputs.channel;")
+        cur.execute("select * from devices LEFT JOIN outputs ON devices.channel = outputs.channel;")
         deviceStates = [dict(row) for row in cur]
         conn.close()
         return deviceStates
-
+        
     @staticmethod
     def __getChannelFor(deviceID, conn):
         command = "select channel from devices where id = ?"
         row = conn.execute(command, deviceID).fetchone()
         return row['channel']
-
-    @staticmethod
-    def __devicesSharingChannelWith(deviceID, conn):
-        command = """
-select devices.id from devices, outputs
-where devices.channel = outputs.channel
-and devices.id = ?;
-"""
-        ids = conn.execute(command, deviceID).fetchall()
-        ids = [e['id'] for e in ids]
-        return ids
 
     @staticmethod
     def __activationFor(deviceID, conn):
@@ -172,18 +179,26 @@ and devices.id = ?;
         activations = conn.execute(command, deviceID).fetchone()
         print(f"db got activation: {activations['activation']}")
         return activations['activation']
-    
+
     @staticmethod
     def __setActivation(activation, channel, conn):
         command = "update outputs set activation = ? where channel = ?;"
         conn.execute(command, [str(activation), str(channel)])
-
         print(f"updating database: {activation} for channel: {channel}")
         
     @staticmethod
     def __setChannel(deviceID, newChannel, conn):
         conn.execute("UPDATE devices set channel = ? WHERE id is ?", (newChannel, deviceID))
         print(f"updated db, set device {deviceID} to channel: {newChannel}")
-
-
-
+        
+    @staticmethod
+    def __addDevice(title, conn):
+        conn.execute("INSERT INTO devices (title) VALUES (?)", (title,))
+        print(f"updating database: added {title}")
+        
+    @staticmethod
+    def __deleteDevice(deviceID, conn):
+        conn.execute("DELETE FROM devices WHERE id = ?", (deviceID,))
+        print(f"deleted device {deviceID}")
+        
+    
