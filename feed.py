@@ -1,17 +1,17 @@
 from enum import Enum
 import sqlite3
 
-class Device(Enum):
-    POWER   = 1
-    NOX     = 2
-    O2      = 3
-    ALARM   = 4
-    BEACON  = 5
-    IGNITE  = 6
-
-class FeedState(Enum):
-    SAFE    = {Device.POWER}
-    ARMED   = set(Device)
+# class Device(Enum):
+#     POWER   = 1
+#     NOX     = 2
+#     O2      = 3
+#     ALARM   = 4
+#     BEACON  = 5
+#     IGNITE  = 6
+# 
+# class FeedState(Enum):
+#     SAFE    = {Device.POWER}
+#     ARMED   = set(Device)
 
 class Feed():
 # =============Public==================
@@ -29,18 +29,15 @@ class Feed():
                 d['cssActivationClass'] = "disabled"
         return deviceList
 
-    @staticmethod
-    def state():
-        devList = Feed.__getDeviceStates()
-        powerOn = [d['activation'] == 1 for d in devList if d['title'] == 'main power'][0]
-        if powerOn:
-            return FeedState.ARMED
-        else:
-            return FeedState.SAFE
+    # @staticmethod
+#     def state():
+#         devList = Feed.__getDeviceStates()
+#         powerOn = [d['activation'] == 1 for d in devList if d['title'] == 'main power'][0]
+#         if powerOn:
+#             return FeedState.ARMED
+#         else:
+#             return FeedState.SAFE
 
-    @staticmethod
-    def __allowedDeviceIDs():
-        return {e.value for e in Feed.state().value}
 
     @staticmethod
     def commandsFromSerial(data):
@@ -145,13 +142,66 @@ class Feed():
         
     @staticmethod
     def __getDeviceStates():
+        """
+        returns all device activations
+        """
         conn = Feed.__getDBConnection()
         cur = conn.cursor()
         cur.execute("select * from devices LEFT JOIN outputs ON devices.channel = outputs.channel;")
         deviceStates = [dict(row) for row in cur]
         conn.close()
         return deviceStates
+    
+    @staticmethod
+    def __allowedDeviceIDs():
+        """
+        returns the ids of all children of active devices
+        """
+        conn = Feed.__getDBConnection()
         
+        activatedDevicesCommand = """select devices.id from devices, outputs 
+where devices.channel = outputs.channel and outputs.activation = 1"""
+        cur = conn.cursor()
+        activatedDeviceIDsRows = cur.execute(activatedDevicesCommand).fetchall()
+        activatedDeviceIDs = [row['id'] for row in activatedDeviceIDsRows]
+        
+        cur = conn.cursor()
+        graphRows = cur.execute("select * from graph;").fetchall()
+        graphRows = [row for row in graphRows if row['parentID'] in activatedDeviceIDs]
+        
+        enabledDeviceIDs = [int(k) for row in graphRows for k in row.keys() if row[k] == 1 and k != 'parentID']
+        
+#         will always include the header parentID as the first result, ignore it.
+#         enabledDeviceIDs = [int(k) for row in enabledDeviceIDsRows for k in row.keys() if row[k] == 1 and k != 'parentID']
+        cur = conn.cursor()
+        initialDeviceID = cur.execute("select id from devices where title = 'main power'").fetchone()
+        enabledDeviceIDs += initialDeviceID
+        print(f"enabled: {enabledDeviceIDs}")
+        
+        conn.close()
+        return enabledDeviceIDs
+        
+    @staticmethod
+    def __requiredDeviceIDs():
+        """
+        returns all parents of active devices
+        """
+    
+        conn = Feed.__getDBConnection()
+        cur = conn.cursor()
+    
+        activeDeviceIDCommand = "select devices.id from devices, outputs where devices.channel = outputs.channel and outputs.activation = 1"
+        rows = cur.execute(activeDeviceIDCommand).fetchall()
+        activeDeviceIDs = [row['id'] for row in rows]
+    
+        requiredDeviceIDs = []
+        for deviceID in activeDeviceIDs:
+            rows = cur.execute(f"select parentID from graph where '{deviceID}' == 1").fetchall()
+            requiredDeviceIDs += [row['parentID'] for row in rows]
+        print(f"required: {requiredDeviceIDs}")
+        conn.close()
+        return requiredDeviceIDs
+    
     @staticmethod
     def __getChannelFor(deviceID, conn):
         command = "select channel from devices where id = ?"

@@ -1,5 +1,7 @@
 DROP TABLE IF EXISTS devices;
 DROP TABLE IF EXISTS outputs;
+DROP TABLE IF EXISTS graph;
+
 
 CREATE TABLE devices (
        id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -11,4 +13,8 @@ CREATE TABLE outputs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     channel INTEGER NOT NULL,
     activation INTEGER NOT NULL
+);
+
+CREATE TABLE graph (
+    parentID INTEGER    
 );
