@@ -3,8 +3,7 @@ import sqlite3
 import numpy as np
 
 class Feed():
-# =============Public==================
-# State _______________________________
+# mark _____________________ state _____________________
     @staticmethod
     def description():
         deviceList = Feed.__getDeviceStates()
@@ -19,14 +18,7 @@ class Feed():
         return deviceList
 
 
-    @staticmethod
-    def commandsFromSerial(data):
-#     todo: this will receive the repeated commands from the arduino,
-#     turn the data into commands, and then commit those commands to the database.
-        if len(data) > 0:
-            print(f"Feed got serial data: {data}")
-
-# Command logic ____________________________
+#mark _____________________ Command Logic _____________________
     @staticmethod
     def commandsFrom(commandData):
         """
@@ -36,7 +28,7 @@ class Feed():
             intent = Feed.__intentFromString(commandData)
         except:
             return None
-            
+
         if intent == "toggle":
             commands = Feed.__getToggleCommandsFor(commandData)
             if commands != None:
@@ -50,15 +42,22 @@ class Feed():
             return None
         else:
             return None
+            
+        
+    @staticmethod
+    def commandsFromSerial(data):
+#     todo: this will receive the repeated commands from the arduino,
+#     turn the data into commands, and then commit those commands to the database.
+        if len(data) > 0:
+            print(f"Feed got serial data: {data}")
 
-#  =================Private==================     
     @staticmethod
     def __getToggleCommandsFor(commandData):
         deviceID = commandData.split(",")[1]
         
         if not int(deviceID) in Feed.__allowedDeviceIDs():
             return None
-
+            
         conn = Feed.__getDBConnection()
         currentActivation = Feed.__activationFor(deviceID, conn)
         
@@ -80,8 +79,6 @@ class Feed():
         return commands
 
  
-    
-
     @staticmethod
     def __getChannelUpdateCommandFor(commandData):
         deviceID, newChannel = commandData.split(",")[1:3]
@@ -95,57 +92,9 @@ class Feed():
         except:
             return None
 
-# Database actions ___________________________
-    @staticmethod
-    def __recordActivation(commands):
-        conn = Feed.__getDBConnection()
 
-        for channel, activation in commands:
-            Feed.__setActivation(activation, channel, conn)
-            
-        conn.commit()
-        conn.close()
 
-    @staticmethod
-    def __recordChannel(deviceID, newChannel):
-        conn = Feed.__getDBConnection()
-        Feed.__setChannel(deviceID, newChannel, conn)
-        conn.commit()
-        conn.close()
-        
-    @staticmethod
-    def recordNewDevice(title):
-        conn = Feed.__getDBConnection()
-        Feed.__addDevice(title, conn)
-        conn.commit()
-        conn.close()
-        
-    @staticmethod
-    def removeDevice(deviceID):
-        conn = Feed.__getDBConnection()
-        Feed.__deleteDevice(deviceID, conn)
-        conn.commit()
-        conn.close()
-
-# Private ---------------------
-    @staticmethod
-    def __getDBConnection():
-        conn = sqlite3.connect('database.db')
-        conn.row_factory = sqlite3.Row #python dicts
-        return conn
-        
-    @staticmethod
-    def __getDeviceStates():
-        """
-        returns all device activations
-        """
-        conn = Feed.__getDBConnection()
-        cur = conn.cursor()
-        cur.execute("select * from devices LEFT JOIN outputs ON devices.channel = outputs.channel;")
-        deviceStates = [dict(row) for row in cur]
-        conn.close()
-        return deviceStates
-    
+#MARK  _____________________ device dependency management _____________________
     @staticmethod
     def __allowedDeviceIDs():
         """
@@ -170,27 +119,7 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         
         conn.close()
         return enabledDeviceIDs
-        
-   #  @staticmethod
-#     def __requiredDeviceIDs():
-#         """
-#         returns all parents of currently active devices
-#         """
-#     
-#         conn = Feed.__getDBConnection()
-#         cur = conn.cursor()
-#     
-#         activeDeviceIDCommand = "select devices.id from devices, outputs where devices.channel = outputs.channel and outputs.activation = 1"
-#         rows = cur.execute(activeDeviceIDCommand).fetchall()
-#         activeDeviceIDs = [row['id'] for row in rows]
-#     
-#         requiredDeviceIDs = []
-#         for deviceID in activeDeviceIDs:
-#             rows = cur.execute(f"select parentID from graph where '{deviceID}' == 1").fetchall()
-#             requiredDeviceIDs += [row['parentID'] for row in rows]
-#         print(f"required: {requiredDeviceIDs}")
-#         conn.close()
-#         return requiredDeviceIDs
+
 
     @staticmethod
     def __getAncestorDeviceIDs(deviceID, conn):
@@ -215,7 +144,6 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         return ancestorIDs[ancestorIDs > 0].tolist()
 
 
-
     @staticmethod
     def __getDescendantDeviceIDs(deviceID, conn):
         """
@@ -233,19 +161,69 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         descendants = deviceIDVec @ graphVec
         for _ in deviceIDVec:
             descendants |= descendants @ graphVec
-#         print(f"deviceIDVec: {deviceIDVec}\, graphVec:\n{graphVec}\ndescendants: {descendants}")
         
         descendants = [1 if e > 0 else 0 for e in descendants]
         descentantIDs = np.multiply(deviceIDs, descendants)
         descentantIDs = descentantIDs[descentantIDs > 0].tolist()
-#         print(f"descendants for {deviceID}: {descentantIDs}")
         return descentantIDs
-    
+
+
+
+
+#MARK _____________________ Database actions _____________________
+# TODO: adding a new device also needs to add it to the graph
     @staticmethod
-    def __getChannelFor(deviceID, conn):
-        command = "select channel from devices where id = ?"
-        row = conn.execute(command, (deviceID,)).fetchone()
-        return row['channel']
+    def recordNewDevice(title):
+        conn = Feed.__getDBConnection()
+        Feed.__addDevice(title, conn)
+        conn.commit()
+        conn.close()
+        
+    @staticmethod
+    def removeDevice(deviceID):
+        conn = Feed.__getDBConnection()
+        Feed.__deleteDevice(deviceID, conn)
+        conn.commit()
+        conn.close()
+        
+    @staticmethod
+    def __recordActivation(commands):
+        conn = Feed.__getDBConnection()
+
+        for channel, activation in commands:
+            Feed.__setActivation(activation, channel, conn)
+            
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def __recordChannel(deviceID, newChannel):
+        conn = Feed.__getDBConnection()
+        Feed.__setChannel(deviceID, newChannel, conn)
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def __getDeviceStates():
+        """
+        returns all device activations
+        """
+        conn = Feed.__getDBConnection()
+        cur = conn.cursor()
+        cur.execute("select * from devices LEFT JOIN outputs ON devices.channel = outputs.channel;")
+        deviceStates = [dict(row) for row in cur]
+        conn.close()
+        return deviceStates
+        
+
+    
+#MARK _____________________ db access helpers_____________________
+
+    @staticmethod
+    def __getDBConnection():
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row #python dicts
+        return conn
 
     @staticmethod
     def __activationFor(deviceID, conn):
@@ -264,6 +242,12 @@ and devices.id = ?;
         command = "update outputs set activation = ? where channel = ?;"
         conn.execute(command, [str(activation), str(channel)])
         print(f"updating database: {activation} for channel: {channel}")
+        
+    @staticmethod
+    def __getChannelFor(deviceID, conn):
+        command = "select channel from devices where id = ?"
+        row = conn.execute(command, (deviceID,)).fetchone()
+        return row['channel']
         
     @staticmethod
     def __setChannel(deviceID, newChannel, conn):

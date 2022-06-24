@@ -24,7 +24,6 @@ def index():
 def incomingSocketMessage(sock):
     while True:
         data = sock.receive()
-        print(f"route collected some data: {data}, type: {type(data)}")
 #         check if this is allowed
         commands = Feed.commandsFrom(data)
         if not commands == None:
