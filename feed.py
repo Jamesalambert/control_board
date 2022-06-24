@@ -1,18 +1,6 @@
 from enum import Enum
 import sqlite3
 
-# class Device(Enum):
-#     POWER   = 1
-#     NOX     = 2
-#     O2      = 3
-#     ALARM   = 4
-#     BEACON  = 5
-#     IGNITE  = 6
-# 
-# class FeedState(Enum):
-#     SAFE    = {Device.POWER}
-#     ARMED   = set(Device)
-
 class Feed():
 # =============Public==================
 # State _______________________________
@@ -28,15 +16,6 @@ class Feed():
             else:
                 d['cssActivationClass'] = "disabled"
         return deviceList
-
-    # @staticmethod
-#     def state():
-#         devList = Feed.__getDeviceStates()
-#         powerOn = [d['activation'] == 1 for d in devList if d['title'] == 'main power'][0]
-#         if powerOn:
-#             return FeedState.ARMED
-#         else:
-#             return FeedState.SAFE
 
 
     @staticmethod
@@ -58,10 +37,10 @@ class Feed():
             return None
             
         if intent == "toggle":
-            command = Feed.__getToggleCommandFor(commandData)
-            if not command == None:
-                Feed.__recordActivation(*command)
-                return command
+            commands = Feed.__getToggleCommandsFor(commandData)
+            if commands != None:
+                Feed.__recordActivation(commands)
+                return commands
             else:
                 return None
         elif intent == "updateChannel":
@@ -73,23 +52,34 @@ class Feed():
 
 #  =================Private==================     
     @staticmethod
-    def __getToggleCommandFor(commandData):
+    def __getToggleCommandsFor(commandData):
         deviceID = commandData.split(",")[1]
+        
         if not int(deviceID) in Feed.__allowedDeviceIDs():
             return None
 
         conn = Feed.__getDBConnection()
-
-        channel = Feed.__getChannelFor(deviceID, conn)
         currentActivation = Feed.__activationFor(deviceID, conn)
-
+        
+        devicesToToggle = [deviceID]
         if currentActivation == 0:
             activation = 1
+#             switch on parents
+            devicesToToggle += Feed.__getParentDeviceIDs(deviceID, conn)
         else:
             activation = 0
-
+#             switch off children too
+            devicesToToggle += Feed.__getChildrenDeviceIDs(deviceID, conn)
+        
+        channels = set([Feed.__getChannelFor(deviceID, conn) for deviceID in devicesToToggle])
         conn.close()
-        return channel, activation
+
+        commands = [(channel, activation) for channel in channels]
+#         TODO remove the [0] below
+        return commands
+
+ 
+    
 
     @staticmethod
     def __getChannelUpdateCommandFor(commandData):
@@ -106,9 +96,12 @@ class Feed():
 
 # Database actions ___________________________
     @staticmethod
-    def __recordActivation(channel, activation):
+    def __recordActivation(commands):
         conn = Feed.__getDBConnection()
-        Feed.__setActivation(activation, channel, conn)
+
+        for channel, activation in commands:
+            Feed.__setActivation(activation, channel, conn)
+            
         conn.commit()
         conn.close()
 
@@ -155,10 +148,9 @@ class Feed():
     @staticmethod
     def __allowedDeviceIDs():
         """
-        returns the ids of all children of active devices
+        returns the children of currently active devices
         """
         conn = Feed.__getDBConnection()
-        
         activatedDevicesCommand = """select devices.id from devices, outputs 
 where devices.channel = outputs.channel and outputs.activation = 1"""
         cur = conn.cursor()
@@ -168,11 +160,9 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         cur = conn.cursor()
         graphRows = cur.execute("select * from graph;").fetchall()
         graphRows = [row for row in graphRows if row['parentID'] in activatedDeviceIDs]
-        
+        #         will always include the header parentID as the first result, ignore it.
         enabledDeviceIDs = [int(k) for row in graphRows for k in row.keys() if row[k] == 1 and k != 'parentID']
         
-#         will always include the header parentID as the first result, ignore it.
-#         enabledDeviceIDs = [int(k) for row in enabledDeviceIDsRows for k in row.keys() if row[k] == 1 and k != 'parentID']
         cur = conn.cursor()
         initialDeviceID = cur.execute("select id from devices where title = 'main power'").fetchone()
         enabledDeviceIDs += initialDeviceID
@@ -184,7 +174,7 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
     @staticmethod
     def __requiredDeviceIDs():
         """
-        returns all parents of active devices
+        returns all parents of currently active devices
         """
     
         conn = Feed.__getDBConnection()
@@ -203,9 +193,30 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         return requiredDeviceIDs
     
     @staticmethod
+    def __getParentDeviceIDs(deviceID, conn):
+#     TODO needs to be recursive
+        """
+        returns the parents of a given device
+        """
+        cur = conn.cursor()
+        rows = cur.execute(f'select parentID from graph where "{deviceID}"').fetchall()
+        return [row['parentID'] for row in rows]
+    
+    @staticmethod
+    def __getChildrenDeviceIDs(deviceID, conn):
+#     TODO needs to be recursive
+        """
+        returns the children of a given device
+        """
+        cur = conn.cursor()
+        rows = cur.execute("select * from graph where parentID = ?", (deviceID,)).fetchall()
+        children = [int(k) for row in rows for k in row.keys() if row[k] == 1 and k!= 'parentID']
+        return children
+    
+    @staticmethod
     def __getChannelFor(deviceID, conn):
         command = "select channel from devices where id = ?"
-        row = conn.execute(command, deviceID).fetchone()
+        row = conn.execute(command, (deviceID,)).fetchone()
         return row['channel']
 
     @staticmethod
