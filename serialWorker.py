@@ -19,9 +19,10 @@ def getSerialConnection():
     conn.write(startSym.encode()) #put Arduino into ready state
     return conn
        
-def write(conn, command):
-    commandBytes = startSym.encode('ascii') + bytes(command) + endSym.encode('ascii')
-    numberOfBytesSent = conn.write(commandBytes)
+def write(conn, commands):
+    for command in commands:
+        commandBytes = startSym.encode('ascii') + bytes(command) + endSym.encode('ascii')
+        numberOfBytesSent = conn.write(commandBytes)
 #     print(f"serialWorker sent {numberOfBytesSent} bytes: {commandBytes}")
     
 def read(conn):

@@ -26,10 +26,10 @@ def incomingSocketMessage(sock):
         data = sock.receive()
         print(f"route collected some data: {data}, type: {type(data)}")
 #         check if this is allowed
-        command = Feed.commandFrom(data)
-        if not command == None:
+        commands = Feed.commandsFrom(data)
+        if not commands == None:
 #             set_trace() #breakpoint
-            inputQueue.put(command)
+            inputQueue.put(commands)
         sock.send(json.dumps(Feed.description()))
 
 @app.route('/setup', methods=['GET'])
@@ -57,10 +57,10 @@ def queueToSerial(inputQueue, serialConnection, stopEvent):
     while not stopEvent.is_set():
 #         while True:
         if not inputQueue.empty():
-            command = inputQueue.get()
-            print(f"commandToSerial: {command}")
-            if not serialConnection == None and not command == None:
-                serialWorker.write(serialConnection, command)            
+            commands = inputQueue.get()
+            print(f"commandToSerial: {commands}")
+            if not serialConnection == None and not commands == None:
+                serialWorker.write(serialConnection, commands)            
         time.sleep(THREAD_SLEEP_TIME)
     serialConnection.close()
     print("inputQueue: stopped serial Connection.")

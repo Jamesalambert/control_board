@@ -1,5 +1,6 @@
 from enum import Enum
 import sqlite3
+import numpy as np
 
 class Feed():
 # =============Public==================
@@ -27,7 +28,7 @@ class Feed():
 
 # Command logic ____________________________
     @staticmethod
-    def commandFrom(commandData):
+    def commandsFrom(commandData):
         """
         returned values will be sent to the serial device
         """
@@ -65,17 +66,17 @@ class Feed():
         if currentActivation == 0:
             activation = 1
 #             switch on parents
-            devicesToToggle += Feed.__getParentDeviceIDs(deviceID, conn)
+            devicesToToggle += Feed.__getAncestorDeviceIDs(deviceID, conn)
         else:
             activation = 0
 #             switch off children too
-            devicesToToggle += Feed.__getChildrenDeviceIDs(deviceID, conn)
+            descendants = Feed.__getDescendantDeviceIDs(deviceID, conn)
+            devicesToToggle += descendants
         
         channels = set([Feed.__getChannelFor(deviceID, conn) for deviceID in devicesToToggle])
         conn.close()
-
+        
         commands = [(channel, activation) for channel in channels]
-#         TODO remove the [0] below
         return commands
 
  
@@ -166,52 +167,79 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         cur = conn.cursor()
         initialDeviceID = cur.execute("select id from devices where title = 'main power'").fetchone()
         enabledDeviceIDs += initialDeviceID
-        print(f"enabled: {enabledDeviceIDs}")
         
         conn.close()
         return enabledDeviceIDs
         
+   #  @staticmethod
+#     def __requiredDeviceIDs():
+#         """
+#         returns all parents of currently active devices
+#         """
+#     
+#         conn = Feed.__getDBConnection()
+#         cur = conn.cursor()
+#     
+#         activeDeviceIDCommand = "select devices.id from devices, outputs where devices.channel = outputs.channel and outputs.activation = 1"
+#         rows = cur.execute(activeDeviceIDCommand).fetchall()
+#         activeDeviceIDs = [row['id'] for row in rows]
+#     
+#         requiredDeviceIDs = []
+#         for deviceID in activeDeviceIDs:
+#             rows = cur.execute(f"select parentID from graph where '{deviceID}' == 1").fetchall()
+#             requiredDeviceIDs += [row['parentID'] for row in rows]
+#         print(f"required: {requiredDeviceIDs}")
+#         conn.close()
+#         return requiredDeviceIDs
+
     @staticmethod
-    def __requiredDeviceIDs():
-        """
-        returns all parents of currently active devices
-        """
-    
-        conn = Feed.__getDBConnection()
-        cur = conn.cursor()
-    
-        activeDeviceIDCommand = "select devices.id from devices, outputs where devices.channel = outputs.channel and outputs.activation = 1"
-        rows = cur.execute(activeDeviceIDCommand).fetchall()
-        activeDeviceIDs = [row['id'] for row in rows]
-    
-        requiredDeviceIDs = []
-        for deviceID in activeDeviceIDs:
-            rows = cur.execute(f"select parentID from graph where '{deviceID}' == 1").fetchall()
-            requiredDeviceIDs += [row['parentID'] for row in rows]
-        print(f"required: {requiredDeviceIDs}")
-        conn.close()
-        return requiredDeviceIDs
-    
-    @staticmethod
-    def __getParentDeviceIDs(deviceID, conn):
-#     TODO needs to be recursive
+    def __getAncestorDeviceIDs(deviceID, conn):
         """
         returns the parents of a given device
         """
+        deviceID = int(deviceID)
         cur = conn.cursor()
-        rows = cur.execute(f'select parentID from graph where "{deviceID}"').fetchall()
-        return [row['parentID'] for row in rows]
-    
+        rows = cur.execute("select * from graph").fetchall()
+        deviceIDs = [row['parentID'] for row in rows]
+
+        # row vector
+        deviceIDVec = np.array([1 if e == deviceID else 0 for e in deviceIDs])
+        graphVec = np.array(list(map(lambda row: [row[k] for k in row.keys() if k != 'parentID'], rows)))
+
+        ancestors = graphVec @ deviceIDVec
+        for _ in deviceIDVec:
+            ancestors |= graphVec @ ancestors
+
+        ancestors = [1 if e > 0 else 0 for e in ancestors]
+        ancestorIDs = np.multiply(deviceIDs, ancestors)
+        return ancestorIDs[ancestorIDs > 0].tolist()
+
+
+
     @staticmethod
-    def __getChildrenDeviceIDs(deviceID, conn):
-#     TODO needs to be recursive
+    def __getDescendantDeviceIDs(deviceID, conn):
         """
         returns the children of a given device
         """
+        deviceID = int(deviceID)
         cur = conn.cursor()
-        rows = cur.execute("select * from graph where parentID = ?", (deviceID,)).fetchall()
-        children = [int(k) for row in rows for k in row.keys() if row[k] == 1 and k!= 'parentID']
-        return children
+        rows = cur.execute("select * from graph").fetchall()
+        deviceIDs = [row['parentID'] for row in rows]
+    
+        # row vector
+        deviceIDVec = np.array([1 if e == deviceID else 0 for e in deviceIDs])
+        graphVec = np.array(list(map(lambda row: [row[k] for k in row.keys() if k != 'parentID'], rows)))
+    
+        descendants = deviceIDVec @ graphVec
+        for _ in deviceIDVec:
+            descendants |= descendants @ graphVec
+#         print(f"deviceIDVec: {deviceIDVec}\, graphVec:\n{graphVec}\ndescendants: {descendants}")
+        
+        descendants = [1 if e > 0 else 0 for e in descendants]
+        descentantIDs = np.multiply(deviceIDs, descendants)
+        descentantIDs = descentantIDs[descentantIDs > 0].tolist()
+#         print(f"descendants for {deviceID}: {descentantIDs}")
+        return descentantIDs
     
     @staticmethod
     def __getChannelFor(deviceID, conn):
