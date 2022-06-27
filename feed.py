@@ -1,17 +1,17 @@
-# todo: split this into logic + db files
-
+from storage import Storage as s
 from typing import Optional, Any
-from enum import Enum
-import sqlite3
 import numpy as np
 
 class Feed():
 # mark _____________________ state _____________________
     @staticmethod
     def description() -> list[dict[str, Any]]:
-        deviceList = Feed._recordChannel()
+        """
+        returns a list of dicts, each dicts describes a device. Used for drawing UI 
+        """
+        deviceList = s.getDeviceStates()
         for d in deviceList:
-            if d['id'] in Feed.__allowedDeviceIDs():
+            if d['id'] in Feed._allowedDeviceIDs():
                 if d['activation'] == 1:
                     d['cssActivationClass'] = "on"
                 else:
@@ -28,23 +28,23 @@ class Feed():
         returned values will be sent to the serial device
         """
         try:
-            intent: Optional[str] = Feed.__intentFromString(commandData)
+            intent: Optional[str] = Feed._intentFromString(commandData)
         except:
             return None
 
         if intent == "toggle":
             commands: Optional[list[tuple[int,int]]]
-            commands = Feed.__getToggleCommandsFor(commandData)
+            commands = Feed._getToggleCommandsFor(commandData)
             if not commands is None:
-                Feed._recordActivation(commands)
+                s.recordActivation(commands)
                 return commands
             else:
                 return None
         elif intent == "updateChannel":
             deviceID: int
             newChannel: int
-            deviceID, newChannel = Feed.__getChannelUpdateCommandFor(commandData)
-            Feed._recordChannel(deviceID, newChannel)
+            deviceID, newChannel = Feed._getChannelUpdateCommandFor(commandData)
+            s.recordChannel(deviceID, newChannel)
             return None
         else:
             return None
@@ -59,7 +59,10 @@ class Feed():
         
 
     @staticmethod
-    def __getToggleCommandsFor(commandData: str) -> Optional[list[tuple[int,int]]]:
+    def _getToggleCommandsFor(commandData: str) -> Optional[list[tuple[int,int]]]:
+        """
+        Returns: a list of tuples (d,a) where d is the deviceID and a is the activation i.e. on/off
+        """
         deviceID : int
         activation: int
         devicesToToggle: list[int]
@@ -70,31 +73,29 @@ class Feed():
         deviceID = int(commandData.split(",")[1])
         devicesToToggle = [deviceID]
         
-        if not deviceID in Feed.__allowedDeviceIDs():
+        if not deviceID in Feed._allowedDeviceIDs():
             return None
             
-        conn = Feed.__getDBConnection()
-        currentActivation: int = Feed.__activationFor(deviceID, conn)
+        currentActivation: int = s.activationFor(deviceID)
         
         if currentActivation == 0:
 #           switch on parents
             activation = 1
-            devicesToToggle += Feed.__getAncestorDeviceIDs(deviceID, conn)
+            devicesToToggle += Feed._getAncestorDeviceIDs(deviceID)
         else:
 #           switch off children too
             activation = 0
-            descendants = Feed.__getDescendantDeviceIDs(deviceID, conn)
+            descendants = Feed._getDescendantDeviceIDs(deviceID)
             devicesToToggle += descendants
         
-        channels = set([Feed.__getChannelFor(deviceID, conn) for deviceID in devicesToToggle])
-        conn.close()
+        channels = set([s.channelFor(deviceID) for deviceID in devicesToToggle])
         
         commands = [(channel, activation) for channel in channels]
         return commands
 
  
     @staticmethod
-    def __getChannelUpdateCommandFor(commandData: str) -> tuple[int, int]:
+    def _getChannelUpdateCommandFor(commandData: str) -> tuple[int, int]:
         print(f"updating: {commandData}")
         deviceAndChannel = commandData.split(",")
         deviceID: int = int(deviceAndChannel[1])
@@ -102,7 +103,7 @@ class Feed():
         return deviceID, newChannel
 
     @staticmethod
-    def __intentFromString(data: str) -> Optional[str]:
+    def _intentFromString(data: str) -> Optional[str]:
         try:
             words: list[str] = data.split(",")
             return words[0]
@@ -113,43 +114,43 @@ class Feed():
 
 #MARK  _____________________ device dependency management _____________________
     @staticmethod
-    def __allowedDeviceIDs() -> set[int]:
+    def _allowedDeviceIDs() -> set[int]:
         """
         returns the children of currently active devices
         """
-        conn = Feed.__getDBConnection()
-        activatedDevicesCommand = """select devices.id from devices, outputs 
-where devices.channel = outputs.channel and outputs.activation = 1"""
-        cur = conn.cursor()
-        activatedDeviceIDsRows = cur.execute(activatedDevicesCommand).fetchall()
-        activatedDeviceIDs: list[int] = [row['id'] for row in activatedDeviceIDsRows]
+
+#       get devices that are currently on
+        deviceStates: list[dict[str, Any]]
+        deviceStates = s.getDeviceStates()
+        activatedDeviceIDs: list[int] = [row['id'] for row in deviceStates if row['activation'] == 1]
         
-        cur = conn.cursor()
-        graphRows = cur.execute("select * from graph;").fetchall()
+#       get their immediate children
+        graphRows: list[dict[str, Any]]
+        graphRows = s.dependencyGraph()
         graphRows = [row for row in graphRows if row['parentID'] in activatedDeviceIDs]
         #         will always include the header parentID as the first result, ignore it.
         enabledDeviceIDs: list[int] = [int(k) for row in graphRows for k in row.keys() if row[k] == 1 and k != 'parentID']
         
-        cur = conn.cursor()
-        initialDeviceID: list[int] = cur.execute("select id from devices where title = 'main power'").fetchone()
-        enabledDeviceIDs += initialDeviceID
+#       always include the 'start' device
+        initialDeviceID: int = s.rootDevice()
+        enabledDeviceIDs.append(initialDeviceID)
         
-        conn.close()
         return set(enabledDeviceIDs)
 
 
     @staticmethod
-    def __getAncestorDeviceIDs(deviceID: int, conn) -> list[int]:
+    def _getAncestorDeviceIDs(deviceID: int) -> list[int]:
         """
         returns the parents of a given device
         """
-        cur = conn.cursor()
-        rows = cur.execute("select * from graph").fetchall()
-        deviceIDs: list[int] = [row['parentID'] for row in rows]
+        # conn = s._getDBConnection()
+#         cur = conn.cursor()
+        graphRows = s.dependencyGraph()
+        deviceIDs: list[int] = [row['parentID'] for row in graphRows]
 
         # row vector
         deviceIDVec = np.array([1 if e == deviceID else 0 for e in deviceIDs])
-        graphVec = np.array(list(map(lambda row: [row[k] for k in row.keys() if k != 'parentID'], rows)))
+        graphVec = np.array(list(map(lambda row: [row[k] for k in row.keys() if k != 'parentID'], graphRows)))
 
         ancestors = graphVec @ deviceIDVec
         for _ in deviceIDVec:
@@ -161,17 +162,16 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
 
 
     @staticmethod
-    def __getDescendantDeviceIDs(deviceID: int, conn) -> list[int]:
+    def _getDescendantDeviceIDs(deviceID: int) -> list[int]:
         """
         returns the children of a given device
         """
-        cur = conn.cursor()
-        rows = cur.execute("select * from graph").fetchall()
-        deviceIDs: list[int] = [row['parentID'] for row in rows]
+        graphRows = s.dependencyGraph()
+        deviceIDs: list[int] = [row['parentID'] for row in graphRows]
     
         # row vector
         deviceIDVec = np.array([1 if e == deviceID else 0 for e in deviceIDs])
-        graphVec = np.array(list(map(lambda row: [row[k] for k in row.keys() if k != 'parentID'], rows)))
+        graphVec = np.array(list(map(lambda row: [row[k] for k in row.keys() if k != 'parentID'], graphRows)))
     
         descendants = deviceIDVec @ graphVec
         for _ in deviceIDVec:
@@ -181,100 +181,12 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         descendantIDs = np.multiply(deviceIDs, descendants)
         return descendantIDs[descendantIDs > 0].tolist()
 
+#mark add/remove devices ___________________________
 
-
-
-#MARK _____________________ Database actions _____________________
-# TODO: adding a new device also needs to add it to the graph
     @staticmethod
-    def recordNewDevice(title: str):
-        conn = Feed.__getDBConnection()
-        Feed.__addDevice(title, conn)
-        conn.commit()
-        conn.close()
-        
+    def addDevice(title: str):
+        s.recordNewDevice(title)
+    
     @staticmethod
     def removeDevice(deviceID: int):
-        conn = Feed.__getDBConnection()
-        Feed.__deleteDevice(deviceID, conn)
-        conn.commit()
-        conn.close()
-        
-    @staticmethod
-    def _recordActivation(commands: list[tuple[int, int]]):
-        conn = Feed.__getDBConnection()
-
-        for channel, activation in commands:
-            Feed.__setActivation(activation, channel, conn)
-            
-        conn.commit()
-        conn.close()
-
-    @staticmethod
-    def _recordChannel(deviceID: int, newChannel: int):
-        conn = Feed.__getDBConnection()
-        Feed.__setChannel(deviceID, newChannel, conn)
-        conn.commit()
-        conn.close()
-
-    @staticmethod
-    def _recordChannel() -> list[dict[str, Any]]:
-        """
-        returns all device activations
-        """
-        conn = Feed.__getDBConnection()
-        cur = conn.cursor()
-        cur.execute("select * from devices LEFT JOIN outputs ON devices.channel = outputs.channel;")
-        deviceStates = [dict(row) for row in cur]
-        conn.close()
-        return deviceStates
-        
-
-#MARK _____________________ db access helpers_____________________
-
-    @staticmethod
-    def __getDBConnection():
-        conn = sqlite3.connect('database.db')
-        conn.row_factory = sqlite3.Row #python dicts
-        return conn
-
-    @staticmethod
-    def __activationFor(deviceID: int, conn) -> int:
-        command = """
-select activation
-from devices, outputs
-where devices.channel = outputs.channel
-and devices.id = ?;
-"""
-        activations = conn.execute(command, str(deviceID)).fetchone()
-        print(f"db got activation: {activations['activation']}")
-        return activations['activation']
-
-    @staticmethod
-    def __setActivation(activation: int, channel: int, conn):
-        command = "update outputs set activation = ? where channel = ?;"
-        conn.execute(command, [str(activation), str(channel)])
-        print(f"updating database: {activation} for channel: {channel}")
-        
-    @staticmethod
-    def __getChannelFor(deviceID: int, conn) -> int:
-        command = "select channel from devices where id = ?"
-        row = conn.execute(command, (str(deviceID),)).fetchone()
-        return row['channel']
-        
-    @staticmethod
-    def __setChannel(deviceID: int, newChannel: int, conn):
-        conn.execute("UPDATE devices set channel = ? WHERE id is ?", (str(newChannel), str(deviceID)))
-        print(f"updated db, set device {deviceID} to channel: {newChannel}")
-        
-    @staticmethod
-    def __addDevice(title: str, conn):
-        conn.execute("INSERT INTO devices (title) VALUES (?)", (title,))
-        print(f"updating database: added {title}")
-        
-    @staticmethod
-    def __deleteDevice(deviceID: int, conn):
-        conn.execute("DELETE FROM devices WHERE id = ?", (str(deviceID),))
-        print(f"deleted device {deviceID}")
-        
-    
+        s.removeDevice(deviceID)

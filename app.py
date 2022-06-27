@@ -39,7 +39,7 @@ def setup():
 def deviceActions():
     try:
         deviceTitle = request.form['newDeviceTitle']
-        Feed.recordNewDevice(deviceTitle)
+        Feed.addDevice(deviceTitle)
     except KeyError:
         pass
     try:
