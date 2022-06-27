@@ -1,3 +1,5 @@
+# todo: split this into logic + db files
+
 from typing import Optional, Any
 from enum import Enum
 import sqlite3
@@ -7,7 +9,7 @@ class Feed():
 # mark _____________________ state _____________________
     @staticmethod
     def description() -> list[dict[str, Any]]:
-        deviceList = Feed.__getDeviceStates()
+        deviceList = Feed._recordChannel()
         for d in deviceList:
             if d['id'] in Feed.__allowedDeviceIDs():
                 if d['activation'] == 1:
@@ -34,7 +36,7 @@ class Feed():
             commands: Optional[list[tuple[int,int]]]
             commands = Feed.__getToggleCommandsFor(commandData)
             if not commands is None:
-                Feed.__recordActivation(commands)
+                Feed._recordActivation(commands)
                 return commands
             else:
                 return None
@@ -42,7 +44,7 @@ class Feed():
             deviceID: int
             newChannel: int
             deviceID, newChannel = Feed.__getChannelUpdateCommandFor(commandData)
-            Feed.__recordChannel(deviceID, newChannel)
+            Feed._recordChannel(deviceID, newChannel)
             return None
         else:
             return None
@@ -199,7 +201,7 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         conn.close()
         
     @staticmethod
-    def __recordActivation(commands: list[tuple[int, int]]):
+    def _recordActivation(commands: list[tuple[int, int]]):
         conn = Feed.__getDBConnection()
 
         for channel, activation in commands:
@@ -209,14 +211,14 @@ where devices.channel = outputs.channel and outputs.activation = 1"""
         conn.close()
 
     @staticmethod
-    def __recordChannel(deviceID: int, newChannel: int):
+    def _recordChannel(deviceID: int, newChannel: int):
         conn = Feed.__getDBConnection()
         Feed.__setChannel(deviceID, newChannel, conn)
         conn.commit()
         conn.close()
 
     @staticmethod
-    def __getDeviceStates() -> list[dict[str, Any]]:
+    def _recordChannel() -> list[dict[str, Any]]:
         """
         returns all device activations
         """
