@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request
-from flask_sock import Sock
+from flask_sock import Sock # type: ignore
 import threading, multiprocessing, queue
 import serialWorker
 import time
 from feed import Feed
 import json
-from pudb import set_trace
+from pudb import set_trace # type: ignore
 
 THREAD_SLEEP_TIME = 0.01
 
@@ -23,17 +23,20 @@ def index():
 @webSocket.route('/sock')
 def incomingSocketMessage(sock):
     while True:
-        data = sock.receive()
-#         check if this is allowed
+        data: str = sock.receive()
+        commands: Optional[list[tuple[int,int]]] 
+#       check if this is can be turned into commands
         commands = Feed.commandsFrom(data)
-        if not commands == None:
+        if not commands is None:
 #             set_trace() #breakpoint
             inputQueue.put(commands)
         sock.send(json.dumps(Feed.description()))
 
+
 @app.route('/setup', methods=['GET'])
 def setup():
     return render_template('setup.html', devices=Feed.description())
+
 
 @app.route('/setup', methods=['POST'])
 def deviceActions():
@@ -50,8 +53,8 @@ def deviceActions():
         pass
     return render_template('setup.html', devices=Feed.description())
 
-# queues to serial____and vice versa______________________________
 
+# queues to serial____and vice versa______________________________
 def queueToSerial(inputQueue, serialConnection, stopEvent):
     while not stopEvent.is_set():
 #         while True:
@@ -59,7 +62,7 @@ def queueToSerial(inputQueue, serialConnection, stopEvent):
             commands = inputQueue.get()
             print(f"commandToSerial: {commands}")
             if not serialConnection == None and not commands == None:
-                serialWorker.write(serialConnection, commands)            
+                serialWorker.write(commands, serialConnection)            
         time.sleep(THREAD_SLEEP_TIME)
     serialConnection.close()
     print("inputQueue: stopped serial Connection.")
@@ -75,6 +78,7 @@ def serialToQueue(serialConnection, outputQueue, stopEvent):
     serialConnection.close()
     print("outputQueue: stopped serial Connection.")
             
+
 def checkHardwareResponses(queue, stopEvent):
     while not stopEvent.is_set():
         accumulator = []
@@ -87,6 +91,9 @@ def checkHardwareResponses(queue, stopEvent):
                 print(f"repeatedCommand: {command}")
 #       Feed.updateDB(repeatedCommands)                
         time.sleep(THREAD_SLEEP_TIME)
+        
+
+            
 # -----------------------------------------------------------------
 
 
@@ -98,8 +105,7 @@ if __name__ == '__main__':
     except:
         serialConn = None
         print("Couldn't get serial connection, running server anyway...")
-
-
+    
     # event object to close serial port
     stopEvent = threading.Event()
     # thread for reading from socket and writing to serial

@@ -1,4 +1,6 @@
-import serial
+from typing import Optional, Any
+
+import serial # type: ignore
 import time
 
 MEGA        = {"device" : "/dev/cu.usbmodem141401", "baud" : 250000, "timeout" : 1}
@@ -19,19 +21,19 @@ def getSerialConnection():
     conn.write(startSym.encode()) #put Arduino into ready state
     return conn
        
-def write(conn, commands):
+def write(commands: list[int], conn) -> None:
     for command in commands:
-        commandBytes = startSym.encode('ascii') + bytes(command) + endSym.encode('ascii')
-        numberOfBytesSent = conn.write(commandBytes)
+        commandBytes: bytes = startSym.encode('ascii') + bytes(command) + endSym.encode('ascii')
+        numberOfBytesSent: int = conn.write(commandBytes)
 #     print(f"serialWorker sent {numberOfBytesSent} bytes: {commandBytes}")
     
-def read(conn):
+def read(conn) -> bytes:
     data = conn.read_until(expected='\r\n')
     # if len(data) != 0:
 #         print(f"serialWorker read {len(data)}: {data}")
     return data
     
-def status(conn):
+def status(conn) -> dict[str, Any]:
     status = {"modem" : conn.name, "rate" : conn.baudrate, "isConnected" : conn.is_open,
             "port": conn.port, "timeout" : conn.timeout}
     return status

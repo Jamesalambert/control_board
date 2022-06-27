@@ -111,7 +111,6 @@ class Feed():
             return None
 
 
-
 #MARK  _____________________ device dependency management _____________________
     @staticmethod
     def _allowedDeviceIDs() -> set[int]:
@@ -182,11 +181,10 @@ class Feed():
         return descendantIDs[descendantIDs > 0].tolist()
 
 #mark add/remove devices ___________________________
-
     @staticmethod
-    def addDevice(title: str):
+    def addDevice(title: str) -> None:
         s.recordNewDevice(title)
     
     @staticmethod
-    def removeDevice(deviceID: int):
+    def removeDevice(deviceID: int) -> None:
         s.removeDevice(deviceID)

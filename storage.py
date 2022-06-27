@@ -1,27 +1,27 @@
 from typing import Optional, Any
 import sqlite3
 
-
 class Storage():
+    dbFileName: str = 'database.db'
 
 #MARK Public:_____ Database actions _____________________
 # TODO: adding a new device also needs to add it to the graph
     @staticmethod
-    def recordNewDevice(title: str):
+    def recordNewDevice(title: str) -> None:
         conn = Storage._getDBConnection()
         Storage.__addDevice(title, conn)
         conn.commit()
         conn.close()
         
     @staticmethod
-    def removeDevice(deviceID: int):
+    def removeDevice(deviceID: int)  -> None:
         conn = Storage._getDBConnection()
         Storage.__deleteDevice(deviceID, conn)
         conn.commit()
         conn.close()
         
     @staticmethod
-    def recordActivation(commands: list[tuple[int, int]]):
+    def recordActivation(commands: list[tuple[int, int]]) -> None:
         conn = Storage._getDBConnection()
 
         for channel, activation in commands:
@@ -38,7 +38,7 @@ class Storage():
         return activation
 
     @staticmethod
-    def recordChannel(deviceID: int, newChannel: int):
+    def recordChannel(deviceID: int, newChannel: int) -> None:
         conn = Storage._getDBConnection()
         Storage.__setChannel(deviceID, newChannel, conn)
         conn.commit()
@@ -84,7 +84,7 @@ class Storage():
 
     @staticmethod
     def _getDBConnection():
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect(Storage.dbFileName)
         conn.row_factory = sqlite3.Row #python dicts
         return conn
 
@@ -101,7 +101,7 @@ and devices.id = ?;
         return activations['activation']
 
     @staticmethod
-    def __setActivation(activation: int, channel: int, conn):
+    def __setActivation(activation: int, channel: int, conn) -> None:
         command = "update outputs set activation = ? where channel = ?;"
         conn.execute(command, [str(activation), str(channel)])
         print(f"updating database: {activation} for channel: {channel}")
@@ -113,17 +113,17 @@ and devices.id = ?;
         return row['channel']
         
     @staticmethod
-    def __setChannel(deviceID: int, newChannel: int, conn):
+    def __setChannel(deviceID: int, newChannel: int, conn)  -> None:
         conn.execute("UPDATE devices set channel = ? WHERE id is ?", (str(newChannel), str(deviceID)))
         print(f"updated db, set device {deviceID} to channel: {newChannel}")
         
     @staticmethod
-    def __addDevice(title: str, conn):
+    def __addDevice(title: str, conn)  -> None:
         conn.execute("INSERT INTO devices (title) VALUES (?)", (title,))
         print(f"updating database: added {title}")
         
     @staticmethod
-    def __deleteDevice(deviceID: int, conn):
+    def __deleteDevice(deviceID: int, conn)  -> None:
         conn.execute("DELETE FROM devices WHERE id = ?", (str(deviceID),))
         print(f"deleted device {deviceID}")
         
