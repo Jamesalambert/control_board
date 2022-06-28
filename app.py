@@ -13,6 +13,7 @@ app = Flask(__name__)
 webSocket = Sock(app)
 inputQueue = queue.Queue(100) #maximum number of items int the queue
 outputQueue = queue.Queue(100)
+messagingQueue = queue.Queue(100)
 
 # Flask routes____________________________________________________
 @app.route('/')
@@ -23,14 +24,24 @@ def index():
 @webSocket.route('/sock')
 def incomingSocketMessage(sock):
     while True:
+#       receive user intent if any
         data: str = sock.receive()
         commands: Optional[list[tuple[int,int]]] 
 #       check if this is can be turned into commands
         commands = Feed.commandsFrom(data)
         if not commands is None:
-#             set_trace() #breakpoint
             inputQueue.put(commands)
+            
         sock.send(json.dumps(Feed.description()))
+            
+
+#       check for messages to display
+        try:
+            message = messagingQueue.get(block=False)
+            if not message is None:
+                sock.send(json.dumps(message))
+        except queue.Empty:
+            pass
 
 
 @app.route('/setup', methods=['GET'])
@@ -93,7 +104,10 @@ def checkHardwareResponses(queue, stopEvent):
         time.sleep(THREAD_SLEEP_TIME)
         
 
-            
+def serialCommsThread(conn, messagingQueue, stopEvent):
+    while not stopEvent.is_set():
+        messagingQueue.put(f"isConnected,{serialWorker.isConnected()}")
+        time.sleep(2)
 # -----------------------------------------------------------------
 
 
@@ -114,13 +128,14 @@ if __name__ == '__main__':
     p2 = threading.Thread(target=serialToQueue, args=(serialConn, outputQueue, stopEvent), daemon=True)
     # thread for printing Arduino output
 #     p3 = threading.Thread(target=checkHardwareResponses, args=(outputQueue, stopEvent), daemon=True)
-
+    serialThread = threading.Thread(target=serialCommsThread, args=(serialConn, messagingQueue, stopEvent), daemon=True)
 
     try:
         # go!
         p1.start()
         p2.start()
 #         p3.start()
+        serialThread.start()
         app.run(debug=True, port=80, host='0.0.0.0')
     except:
         stopEvent.set()

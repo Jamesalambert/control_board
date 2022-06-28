@@ -5,6 +5,7 @@ socket.addEventListener('message', ev => {
         for (const device of devices){
             $('#' + device['id']).attr('class', device['cssActivationClass']);
         }
+        
 });
 
 function toggle(deviceID) {

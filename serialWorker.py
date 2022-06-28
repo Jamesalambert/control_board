@@ -1,6 +1,7 @@
 from typing import Optional, Any
 
 import serial # type: ignore
+import serial.tools.list_ports
 import time
 
 MEGA        = {"device" : "/dev/cu.usbmodem141401", "baud" : 250000, "timeout" : 1}
@@ -25,15 +26,15 @@ def write(commands: list[int], conn) -> None:
     for command in commands:
         commandBytes: bytes = startSym.encode('ascii') + bytes(command) + endSym.encode('ascii')
         numberOfBytesSent: int = conn.write(commandBytes)
-#     print(f"serialWorker sent {numberOfBytesSent} bytes: {commandBytes}")
     
 def read(conn) -> bytes:
     data = conn.read_until(expected='\r\n')
-    # if len(data) != 0:
-#         print(f"serialWorker read {len(data)}: {data}")
     return data
-    
-def status(conn) -> dict[str, Any]:
-    status = {"modem" : conn.name, "rate" : conn.baudrate, "isConnected" : conn.is_open,
-            "port": conn.port, "timeout" : conn.timeout}
-    return status
+
+# todo: this should check to see if the arduino is correctly programmed.
+def isConnected() -> str:
+    ports = [tuple(p)[0] for p in serial.tools.list_ports.comports()]
+    if modem['device'] in ports:
+        return True
+    else:
+        return False
