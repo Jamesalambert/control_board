@@ -6,6 +6,14 @@ body {
     text-align: center;
 }
 
+#messageboard {
+    color: red
+}
+
+.connected {
+    color: green;
+}
+
 nav {
     padding-top: 20px;
 /*     padding-bottom: 10px; */
@@ -59,3 +67,4 @@ button.disabled{
 .deviceMenu p {
     text-align: left;
 }
+
