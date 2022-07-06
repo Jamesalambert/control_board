@@ -1,7 +1,6 @@
 var messageBoard = document.getElementById('messageBoard');
 var body = document.getElementById('tree');
 
-
 socket.addEventListener('message', ev => {
         const rootDeviceData = JSON.parse(ev.data);  
         if (typeof(rootDeviceData) == 'object' && 'children' in rootDeviceData){

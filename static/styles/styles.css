@@ -15,14 +15,20 @@ body {
 }
 
 nav {
-    padding-top: 20px;
-/*     padding-bottom: 10px; */
+    padding-top: 40px;
+    padding-bottom: 10px;
 }
 
 nav > a {
-    color: blue;
-    padding-left: 10px;
-    padding-right: 10px;
+    color: white;
+    background-color: blue;
+    border-radius: 4px;
+    padding: 10px;
+    text-decoration: none;
+}
+
+.active {
+    background-color: red;
 }
 
 button {
