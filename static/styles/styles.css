@@ -31,6 +31,7 @@ button {
 	color: white;
 	font-size: 20pt;
 	border-radius: 8px;
+	display: inline-block;
 }
 
 button.off{
@@ -43,6 +44,22 @@ button.on{
 
 button.disabled{
 	background-color: grey;
+}
+
+.deviceTree {
+    margin: 10px;
+    background-color: rgba(0,0,100,0.2);
+    border-radius: 8px;
+}
+
+.treeChildren{
+    justify-content: center;
+    align-content: center;
+}
+
+
+.deviceTree > button{
+    display: block;
 }
 
 

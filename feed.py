@@ -1,6 +1,8 @@
 from storage import Storage as s
 from typing import Optional, Any
 import numpy as np
+import json
+
 
 class Feed():
 # mark _____________________ state _____________________
@@ -20,6 +22,33 @@ class Feed():
                 d['cssActivationClass'] = "disabled"
         return deviceList
 
+
+    @staticmethod
+    def tree() -> str:
+        deviceList: list[dict[str, Any]]
+        deviceList = Feed.description()
+
+        for d in deviceList:
+            d['children'] = Feed._getDescendantDeviceIDs(d['id'], depth=1)
+
+        for device in deviceList:
+            childDevices: list[dict[str, Any]] = []
+            for childID in device['children']:
+                childDevice = next(filter(lambda d: d['id'] == childID, deviceList))
+                childDevices.append(childDevice)
+            
+            device['children'] = childDevices
+
+        rootDevice: dict[str,Any]
+        rootDevice = next(filter(lambda d: d['id'] == s.rootDevice(), deviceList))
+        jsonDescription: str = json.dumps(rootDevice)
+        return jsonDescription
+        
+    
+        
+    @staticmethod
+    def deviceFromID(deviceStates, deviceID):
+        return next(filter(lambda device: device['id'] == deviceID, deviceStates))
 
 #mark _____________________ Command Logic _____________________
     @staticmethod
@@ -65,13 +94,12 @@ class Feed():
         """
         deviceID : int
         activation: int
-        devicesToToggle: list[int]
-        descendants: list[int]
+        devicesToToggle: set[Any]
         channels: set[int]
         commands: list[tuple[int,int]]
         
         deviceID = int(commandData.split(",")[1])
-        devicesToToggle = [deviceID]
+        devicesToToggle = {deviceID}
         
         if not deviceID in Feed._allowedDeviceIDs():
             return None
@@ -81,12 +109,11 @@ class Feed():
         if currentActivation == 0:
 #           switch on parents
             activation = 1
-            devicesToToggle += Feed._getAncestorDeviceIDs(deviceID)
+            devicesToToggle = devicesToToggle.union(Feed._getAncestorDeviceIDs(deviceID))
         else:
 #           switch off children too
             activation = 0
-            descendants = Feed._getDescendantDeviceIDs(deviceID)
-            devicesToToggle += descendants
+            devicesToToggle = devicesToToggle.union(Feed._getDescendantDeviceIDs(deviceID))
         
         channels = set([s.channelFor(deviceID) for deviceID in devicesToToggle])
         
@@ -117,33 +144,30 @@ class Feed():
         """
         returns the children of currently active devices
         """
-
 #       get devices that are currently on
         deviceStates: list[dict[str, Any]]
         deviceStates = s.getDeviceStates()
         activatedDeviceIDs: list[int] = [row['id'] for row in deviceStates if row['activation'] == 1]
-        
+
 #       get their immediate children
         graphRows: list[dict[str, Any]]
         graphRows = s.dependencyGraph()
         graphRows = [row for row in graphRows if row['parentID'] in activatedDeviceIDs]
-        #         will always include the header parentID as the first result, ignore it.
+#       will always include the header parentID as the first result, ignore it.
         enabledDeviceIDs: list[int] = [int(k) for row in graphRows for k in row.keys() if row[k] == 1 and k != 'parentID']
-        
+
 #       always include the 'start' device
         initialDeviceID: int = s.rootDevice()
         enabledDeviceIDs.append(initialDeviceID)
-        
-        return set(enabledDeviceIDs)
 
+        return set(enabledDeviceIDs)
+        
 
     @staticmethod
     def _getAncestorDeviceIDs(deviceID: int) -> list[int]:
         """
         returns the parents of a given device
         """
-        # conn = s._getDBConnection()
-#         cur = conn.cursor()
         graphRows = s.dependencyGraph()
         deviceIDs: list[int] = [row['parentID'] for row in graphRows]
 
@@ -157,11 +181,12 @@ class Feed():
 
         ancestors = [1 if e > 0 else 0 for e in ancestors]
         ancestorIDs = np.multiply(deviceIDs, ancestors)
-        return ancestorIDs[ancestorIDs > 0].tolist()
+        ancestorIDs = ancestorIDs[ancestorIDs > 0]
+        return np.unique(ancestorIDs).tolist()
 
 
     @staticmethod
-    def _getDescendantDeviceIDs(deviceID: int) -> list[int]:
+    def _getDescendantDeviceIDs(deviceID: int, depth: int = None) -> list[int]:
         """
         returns the children of a given device
         """
@@ -171,14 +196,19 @@ class Feed():
         # row vector
         deviceIDVec = np.array([1 if e == deviceID else 0 for e in deviceIDs])
         graphVec = np.array(list(map(lambda row: [row[k] for k in row.keys() if k != 'parentID'], graphRows)))
-    
         descendants = deviceIDVec @ graphVec
-        for _ in deviceIDVec:
-            descendants |= descendants @ graphVec
+
+        depth = len(deviceIDVec) if depth is None else abs(depth)
+        
+        if depth > 1:
+            for _ in range(depth):
+                descendants |= descendants @ graphVec
         
         descendants = [1 if e > 0 else 0 for e in descendants]
         descendantIDs = np.multiply(deviceIDs, descendants)
-        return descendantIDs[descendantIDs > 0].tolist()
+        descendantIDs = descendantIDs[descendantIDs > 0]
+        output = np.unique(descendantIDs).tolist()
+        return output
 
 #mark add/remove devices ___________________________
     @staticmethod

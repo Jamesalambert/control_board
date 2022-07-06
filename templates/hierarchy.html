@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{url_for('static',filename='styles/nest.css')}}">
+
+<h1> {% block title %} Hierarchy {% endblock %}</h1>
+
+<div id="tree"></div>
+
+<script src="{{url_for('static',filename='hierarchy_script.js')}}"></script>
+{% endblock %}

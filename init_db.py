@@ -10,13 +10,14 @@ outputsStartData = zip(CHANNELS, ACTIVATIONS)
 
 graphStartData = [  [0,0,0,0,1,0],
                     [0,0,0,0,0,0],
-                    [0,0,0,0,0,0],
-                    [0,1,0,0,0,1],
-                    [1,0,0,1,0,0],
-                    [0,0,1,0,0,0]]
+                    [0,1,0,0,0,0],
+                    [0,0,1,0,0,1],
+                    [0,0,0,1,0,0],
+                    [0,0,0,0,0,0]]
 
 WARNING = """RUNNING THIS SCRIPT WILL DELETE ANY DEVICES THAT HAVE BEEN ADDED AND RESET CHANNELS TO A DEFAULT STATE.
-Type "reset" to reset the database or type anything else to stop.
+- Type "reset" to reset the database 
+- or type anything else to stop.
 """
 
 answer = input(WARNING)
@@ -41,11 +42,6 @@ if shouldContinue:
     deviceIDs = [row['id'] for row in cur.fetchall()]
     for deviceID in deviceIDs:
         cur.execute(f"ALTER TABLE graph ADD COLUMN '{deviceID}' INTEGER DEFAULT 0 NOT NULL")
-#     cur.execute("ALTER TABLE graph DROP COLUMN temp")
-
-#     rows
-#     command = f"INSERT INTO graph VALUES (?, 0, 1, 1, 1, 1, 1)"
-#     cur.execute(command, [deviceIDs[0]])
     
     cur.executemany("INSERT INTO graph VALUES(?,?,?,?,?,?,?)", [[a] + b for a,b in zip(deviceIDs, graphStartData)])
     

@@ -59,7 +59,7 @@ class Storage():
         conn = Storage._getDBConnection()
         cur = conn.cursor()
         cur.execute("select * from devices LEFT JOIN outputs ON devices.channel = outputs.channel;")
-        deviceStates = [dict(row) for row in cur]
+        deviceStates = [dict(row) for row in cur]        
         conn.close()
         return deviceStates
         
@@ -78,7 +78,6 @@ class Storage():
         initialDeviceID: list[int] = cur.execute("select id from devices where title = 'main power'").fetchone()
         return initialDeviceID[0]
 
-        
 
 #MARK Private:______ db access helpers_____________________
 

@@ -9,11 +9,13 @@ CREATE TABLE devices (
        channel INTEGER
 );
 
+
 CREATE TABLE outputs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     channel INTEGER NOT NULL,
     activation INTEGER NOT NULL
 );
+
 
 CREATE TABLE graph (
     parentID INTEGER    

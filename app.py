@@ -31,9 +31,11 @@ def incomingSocketMessage(sock):
         commands = Feed.commandsFrom(data)
         if not commands is None:
             inputQueue.put(commands)
-            
+          
         sock.send(json.dumps(Feed.description()))
-            
+#         todo: remove this!
+        sock.send(Feed.tree())
+
 
 #       check for messages to display
         try:
@@ -43,6 +45,9 @@ def incomingSocketMessage(sock):
         except queue.Empty:
             pass
 
+@app.route('/hierarchy', methods=['GET'])
+def hierarchy():
+    return render_template('hierarchy.html', tree=Feed.tree())
 
 @app.route('/setup', methods=['GET'])
 def setup():
@@ -102,12 +107,15 @@ def checkHardwareResponses(queue, stopEvent):
                 print(f"repeatedCommand: {command}")
 #       Feed.updateDB(repeatedCommands)                
         time.sleep(THREAD_SLEEP_TIME)
+    
         
 
 def serialCommsThread(conn, messagingQueue, stopEvent):
     while not stopEvent.is_set():
         messagingQueue.put(f"isConnected,{serialWorker.isConnected()}")
         time.sleep(2)
+    conn.close()
+    print("comms thread: stopped serial Connection.")
 # -----------------------------------------------------------------
 
 
