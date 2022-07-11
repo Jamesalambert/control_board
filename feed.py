@@ -43,9 +43,9 @@ class Feed():
         rootDevice = next(filter(lambda d: d['id'] == s.rootDevice(), deviceList))
         jsonDescription: str = json.dumps(rootDevice)
         return jsonDescription
-        
-    
-        
+
+
+
     @staticmethod
     def deviceFromID(deviceStates, deviceID):
         return next(filter(lambda device: device['id'] == deviceID, deviceStates))
