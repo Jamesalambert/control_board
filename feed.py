@@ -217,16 +217,3 @@ class Feed():
         output = np.unique(descendantIDs).tolist()
         return output
 
-#mark add/remove devices ___________________________
-    @staticmethod
-    def addDevice(title: str) -> None:
-        s.recordNewDevice(title)
-    
-    @staticmethod
-    def removeDevice(deviceID: int) -> None:
-        s.removeDevice(deviceID)
-
-    @staticmethod
-    def updateChannel(deviceID: int, newChannel: int):
-        s.recordChannel(deviceID, newChannel)
-

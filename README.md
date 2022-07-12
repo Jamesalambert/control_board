@@ -1,6 +1,6 @@
 # Control Panel
 
-This presents a web interface intended to control devices vi an Arduino.
+This presents a React web interface to control devices via an Arduino.
 
 Communication takes place over the serial port.
 

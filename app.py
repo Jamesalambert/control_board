@@ -48,7 +48,6 @@ def incomingSocketMessage(sock):
 @app.route('/hierarchy', methods=['GET'])
 def hierarchy():
     return Feed.tree()
-#     return render_template('hierarchy.html', tree=Feed.tree())
 
 @app.route('/hierarchy', methods=['POST'])
 def deviceControl():
@@ -60,30 +59,7 @@ def deviceControl():
 @app.route('/setup', methods=['GET'])
 def setup():
     return json.dumps(Feed.description())
-#     return render_template('setup.html', devices=Feed.description())
 
-
-# @app.route('/setup', methods=['POST'])
-# def deviceActions():
-#     try:
-#         deviceTitle = request.form['newDeviceTitle']
-#         Feed.addDevice(deviceTitle)
-#     except KeyError:
-#         pass
-#     try:
-#         deviceToDelete = request.form['deviceToDelete']
-#         print(f"server: about to delete {deviceToDelete}")
-#         Feed.removeDevice(deviceToDelete)
-#     except KeyError:
-#         pass
-#     try:
-#         deviceToMoveChannel = request.form['deviceToMoveChannel']
-#         print(f"Moving device {deviceToMoveChannel}")
-#         Feed.updateChannel(deviceToMoveChannel, )
-#     except KeyError:
-#         pass
-#     return json.dumps(Feed.description())
-# #     return render_template('setup.html', devices=Feed.description())
 @app.route('/setup', methods=['POST'])
 def deviceActions():
     command = Feed.commandsFrom(request.data.decode())
