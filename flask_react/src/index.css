@@ -1,0 +1,93 @@
+body {
+    margin: auto;
+    width: 70vw;;
+    padding-top: 30px;
+    text-align: center;
+
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue',
+    sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+
+/* Navigation */
+nav {
+    padding-top: 40px;
+    padding-bottom: 10px;
+    text-align: center;
+}
+
+#nav-logo {
+    display: block;
+    height: 1cm
+}
+
+nav > a {
+    color: white;
+    background-color: blue;
+    border-radius: 4px;
+    padding: 10px;
+    text-decoration: none;
+    margin-left: 2vw;
+    margin-right: 1vw;
+}
+
+/* setup */
+.deviceSettings {
+    display: inline-block;
+    background-color: rgb(230,230,230);
+    border-radius: 12px;
+    margin: 2vh;
+    padding: 2vw;
+}
+
+/* control */
+
+.device {
+    text-align: left;
+    padding-left: 10%;
+    padding-right: 2%;
+/*     padding-top: 2%; */
+/*     padding-bottom: 2%; */
+    border-left: solid rgba(0, 219, 118);
+    background-color: rgba(0, 219, 118, 20%);
+/*     border-radius: 12px; */
+/*     filter: hue-rotate(30deg); */
+/*     margin: 1%; */
+}
+
+.deviceChildren {
+/*     display: inline-block; */
+    padding-top: 2%;
+    padding-bottom: 2%;
+}
+
+/* all */
+
+button {
+	border: none;
+	padding: 10px;
+	color: white;
+	font-size: 20pt;
+	border-radius: 8px;
+}
+
+button.on {
+    background-color: red;
+}
+
+
+button.off {
+    background-color: blue;
+}
+
+button.disabled {
+    background-color: grey;
+}
