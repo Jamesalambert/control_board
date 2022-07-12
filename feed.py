@@ -13,6 +13,7 @@ class Feed():
         """
         deviceList = s.getDeviceStates()
         for d in deviceList:
+            d['children'] = Feed._getDescendantDeviceIDs(d['id'], 1)
             if d['id'] in Feed._allowedDeviceIDs():
                 if d['activation'] == 1:
                     d['cssActivationClass'] = "on"
@@ -57,23 +58,29 @@ class Feed():
         returned values will be sent to the serial device
         """
         try:
-            intent: Optional[str] = Feed._intentFromString(commandData)
+            command: Optional[dict] = Feed._commandFromString(commandData)
         except:
             return None
 
-        if intent == "toggle":
+        if command['intent'] == "toggle":
             commands: Optional[list[tuple[int,int]]]
-            commands = Feed._getToggleCommandsFor(commandData)
+            commands = Feed._getToggleCommandsFor(command)
             if not commands is None:
                 s.recordActivation(commands)
                 return commands
             else:
                 return None
-        elif intent == "updateChannel":
-            deviceID: int
-            newChannel: int
-            deviceID, newChannel = Feed._getChannelUpdateCommandFor(commandData)
+        elif command['intent'] == "updateChannel":
+            deviceID: int = command['deviceID']
+            newChannel: int = command['newChannel']
             s.recordChannel(deviceID, newChannel)
+            return None
+        elif command['intent'] == "addDevice":
+            deviceTitle: str = commandData[1]
+            return None
+        elif command['intent'] == "removeDevice":
+            deviceID: int = int(commandData[1])
+            s.removeDevice(deviceID)
             return None
         else:
             return None
@@ -88,7 +95,7 @@ class Feed():
         
 
     @staticmethod
-    def _getToggleCommandsFor(commandData: str) -> Optional[list[tuple[int,int]]]:
+    def _getToggleCommandsFor(command: dict) -> Optional[list[tuple[int,int]]]:
         """
         Returns: a list of tuples (d,a) where d is the deviceID and a is the activation i.e. on/off
         """
@@ -98,7 +105,7 @@ class Feed():
         channels: set[int]
         commands: list[tuple[int,int]]
         
-        deviceID = int(commandData.split(",")[1])
+        deviceID = command['deviceID']
         devicesToToggle = {deviceID}
         
         if not deviceID in Feed._allowedDeviceIDs():
@@ -130,10 +137,10 @@ class Feed():
         return deviceID, newChannel
 
     @staticmethod
-    def _intentFromString(data: str) -> Optional[str]:
+    def _commandFromString(data: str) -> Optional[dict]:
         try:
-            words: list[str] = data.split(",")
-            return words[0]
+            command: dict = json.loads(data)
+            return command
         except:
             return None
 
@@ -218,3 +225,8 @@ class Feed():
     @staticmethod
     def removeDevice(deviceID: int) -> None:
         s.removeDevice(deviceID)
+
+    @staticmethod
+    def updateChannel(deviceID: int, newChannel: int):
+        s.recordChannel(deviceID, newChannel)
+
