@@ -4,6 +4,7 @@ import numpy as np
 import json
 
 
+
 class Feed():
 # mark _____________________ state _____________________
     @staticmethod
@@ -57,15 +58,14 @@ class Feed():
         """
         returned values will be sent to the serial device
         """
-        try:
-            command: Optional[dict] = Feed._commandFromString(commandData)
-        except:
-            return None
-
+        
+        command: Optional[dict] = Feed._commandFromString(commandData)
+        
         if command['intent'] == "toggle":
             commands: Optional[list[tuple[int,int]]]
             commands = Feed._getToggleCommandsFor(command)
             if not commands is None:
+#                 todo: move this record command down to commandsFromSerial()
                 s.recordActivation(commands)
                 return commands
             else:
@@ -76,7 +76,7 @@ class Feed():
             s.recordChannel(deviceID, newChannel)
             return None
         elif command['intent'] == "addDevice":
-            deviceTitle: str = commandData[1]
+#             deviceTitle: str = commandData[1]
             return None
         elif command['intent'] == "removeDevice":
             deviceID: int = int(commandData[1])
@@ -87,11 +87,19 @@ class Feed():
             
         
     @staticmethod
-    def commandsFromSerial(data: str):
+    def commandsFromSerial(data: str) -> Optional[list[tuple[int,int]]]:
 #     todo: this will receive the repeated commands from the arduino,
 #     turn the data into commands, and then commit those commands to the database.
+# todo: use the repeated command as confirmation that the command has been followed
+
         if len(data) > 0:
             print(f"Feed got serial data: {data}")
+            split_data = data.split('\r\n')
+            pairs = filter(lambda x: len(x) == 2, split_data)
+            tuples = map(lambda x : (int(x[0]), int(x[1])), pairs)
+            return tuples
+        else:
+            return None
         
 
     @staticmethod

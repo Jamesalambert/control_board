@@ -1,6 +1,11 @@
 import sqlite3
 
 SQL_SCHEME_FILE = 'schema.sql'
+
+
+
+
+
 DEVICE_TITLES = ['main power', 'NOX', 'O2', 'alarm', 'beacon', 'ignite']
 ACTIVATIONS = [0] * len(DEVICE_TITLES)
 CHANNELS = list(range(1, len(DEVICE_TITLES) + 1))

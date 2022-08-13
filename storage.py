@@ -1,8 +1,11 @@
 from typing import Optional, Any
+from pathlib import Path
 import sqlite3
+
 
 class Storage():
     dbFileName: str = 'database.db'
+    dbPath = Path(__file__).parents[0] / dbFileName
 
 #MARK Public:_____ Database actions _____________________
 # TODO: adding a new device also needs to add it to the graph
@@ -83,7 +86,7 @@ class Storage():
 
     @staticmethod
     def _getDBConnection():
-        conn = sqlite3.connect(Storage.dbFileName)
+        conn = sqlite3.connect(Storage.dbPath)
         conn.row_factory = sqlite3.Row #python dicts
         return conn
 
@@ -104,7 +107,7 @@ and devices.id = ?;
         command = "update outputs set activation = ? where channel = ?;"
         conn.execute(command, [str(activation), str(channel)])
         print(f"updating database: {activation} for channel: {channel}")
-        
+
     @staticmethod
     def __getChannelFor(deviceID: int, conn) -> int:
         command = "select channel from devices where id = ?"
