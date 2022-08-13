@@ -72,21 +72,23 @@ def queueToSerial(inputQueue, serialConnection, stopEvent):
         if not inputQueue.empty():
             commands = inputQueue.get()
             print(f"commandToSerial: {commands}")
-            if not serialConnection == None and not commands == None:
+            if not serialConnection is None and not commands is None:
                 serialWorker.write(commands, serialConnection)            
         time.sleep(THREAD_SLEEP_TIME)
-    serialConnection.close()
+    if serialConnection:
+        serialConnection.close()
     print("inputQueue: stopped serial Connection.")
         
 
 def serialToQueue(serialConnection, outputQueue, stopEvent):
     while not stopEvent.is_set():
-        if serialConnection != None:
+        if not serialConnection is None:
             data = serialWorker.read(serialConnection)
 #             print(f"serialToQueue got: {data}")
             outputQueue.put(data)
         time.sleep(THREAD_SLEEP_TIME)
-    serialConnection.close()
+    if serialConnection:
+        serialConnection.close()
     print("outputQueue: stopped serial Connection.")
             
 
@@ -142,6 +144,7 @@ if __name__ == '__main__':
         print("stopping...")
         
     stopEvent.set()
-    serialConn.close()
+    if serialConn:
+        serialConn.close()
     
     print("finished")
