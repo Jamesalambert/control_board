@@ -57,7 +57,7 @@ class Storage():
     @staticmethod
     def getDeviceStates() -> list[dict[str, Any]]:
         """
-        returns all device information including activations.
+        :return: list[dict[str, Any]] -  All device information including activations.
         """
         conn = Storage._getDBConnection()
         cur = conn.cursor()
@@ -86,12 +86,21 @@ class Storage():
 
     @staticmethod
     def _getDBConnection():
+        """
+        :return: sqlite3 database connection 
+        """
         conn = sqlite3.connect(Storage.dbPath)
         conn.row_factory = sqlite3.Row #python dicts
         return conn
 
     @staticmethod
     def __activationFor(deviceID: int, conn) -> int:
+        """
+        Find out whether a device is on or off
+        :param deviceID: Int - device id
+        :param conn: sqlite db connection
+        :return: int - activation of the device
+        """
         command = """
 select activation
 from devices, outputs
@@ -104,28 +113,54 @@ and devices.id = ?;
 
     @staticmethod
     def __setActivation(activation: int, channel: int, conn) -> None:
+        """
+        Set the activation for a device
+        :param deviceID: Int - device id
+        :param conn: sqlite db connection
+        """
         command = "update outputs set activation = ? where channel = ?;"
         conn.execute(command, [str(activation), str(channel)])
         print(f"updating database: {activation} for channel: {channel}")
 
     @staticmethod
     def __getChannelFor(deviceID: int, conn) -> int:
+        """
+        Get a device's channel number
+        :param deviceID: Int - device id
+        :param conn: sqlite db connection
+        :return: int - device's channel
+        """
         command = "select channel from devices where id = ?"
         row = conn.execute(command, (str(deviceID),)).fetchone()
         return row['channel']
         
     @staticmethod
     def __setChannel(deviceID: int, newChannel: int, conn)  -> None:
+        """
+        Set a device's channel number
+        :param deviceID: Int - device id
+        :param conn: sqlite db connection
+        """
         conn.execute("UPDATE devices set channel = ? WHERE id is ?", (str(newChannel), str(deviceID)))
         print(f"updated db, set device {deviceID} to channel: {newChannel}")
         
     @staticmethod
     def __addDevice(title: str, conn)  -> None:
+        """
+        Add a device to the database
+        :param title: str - device name
+        :param conn: sqlite db connection
+        """
         conn.execute("INSERT INTO devices (title) VALUES (?)", (title,))
         print(f"updating database: added {title}")
         
     @staticmethod
     def __deleteDevice(deviceID: int, conn)  -> None:
+        """
+        Delete a device from the database
+        :param deviceID: int - device id
+        :param conn: sqlite db connection
+        """
         conn.execute("DELETE FROM devices WHERE id = ?", (str(deviceID),))
         print(f"deleted device {deviceID}")
         

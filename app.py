@@ -1,6 +1,5 @@
 from typing import Optional, Any
 from flask import Flask, request
-# from flask_sock import Sock # type: ignore
 import threading, multiprocessing, queue
 import serialWorker
 import time
@@ -18,55 +17,54 @@ outputQueue = queue.Queue(100)
 
 # Flask routes____________________________________________________
 
-# https://blog.miguelgrinberg.com/post/add-a-websocket-route-to-your-flask-2-x-application
-# @webSocket.route('/sock')
-# def incomingSocketMessage(sock):
-#     while True:
-# #       receive user intent if any
-#         data: str = sock.receive()
-#         commands: Optional[list[tuple[int,int]]] 
-# #       check if this is can be turned into commands
-#         commands = Feed.commandsFrom(data)
-#         if not commands is None:
-#             inputQueue.put(commands)
-#           
-#         sock.send(json.dumps(Feed.description()))
-# #         todo: remove this!
-#         sock.send(Feed.tree())
-# 
-# 
-# #       check for messages to display
-#         try:
-#             message = messagingQueue.get(block=False)
-#             if not message is None:
-#                 sock.send(json.dumps(message))
-#         except queue.Empty:
-#             pass
-
 @app.route('/hierarchy', methods=['GET'])
 def hierarchy():
+    """
+    returns a hierarchical data structure describing the system
+    :return: json string
+    """
 #     todo append useful metadata such as serial conn status here
-    return Feed.tree()
+    return json.dumps(Feed.tree())
 
 @app.route('/hierarchy', methods=['POST'])
 def deviceControl():
+    """
+    Handles POST requests indicating user commands
+    returns a hierarchical data structure describing the system
+    :return: json string
+    """
     commands = Feed.commandsFrom(request.data.decode())
     if not commands is None:
             inputQueue.put(commands)
-    return Feed.tree()
+    return json.dumps(Feed.tree())
 
 @app.route('/setup', methods=['GET'])
 def setup():
+    """
+    returns a list of dicts describing every device
+    :return: json string
+    """
     return json.dumps(Feed.description())
 
 @app.route('/setup', methods=['POST'])
 def deviceActions():
+    """
+    Handles post requests for the setup page
+    returns a list of dicts describing every device
+    :return: json string
+    """
     command = Feed.commandsFrom(request.data.decode())
     return json.dumps(Feed.description())
 
 
 # queues to serial____and vice versa______________________________
 def queueToSerial(inputQueue, serialConnection, stopEvent):
+    """
+    Commands added to this queue are sent to the Arduino over the serial connection.
+    :param inputQueue: Queue - a multitasking queue
+    :param serialConnection: PySerial object - a serial connection object.
+    :param stopEvent: a multiprocessing Event - used to tell this process to end.
+    """
     while not stopEvent.is_set():
 #         while True:
         if not inputQueue.empty():
@@ -81,6 +79,14 @@ def queueToSerial(inputQueue, serialConnection, stopEvent):
         
 
 def serialToQueue(serialConnection, outputQueue, stopEvent):
+#     todo: currently data on the outputQueu is unused.
+    """
+    This function reads from the serial connection and places the data on a queue.
+    This data may represent telemetry or confirm that previous commands have been carried out.
+    :param serialConnection: PySerial object - a serial connection object.
+    :param outputQueue: Queue - a multitasking queue
+    :param stopEvent: a multiprocessing Event - used to tell this process to end.
+    """
     while not stopEvent.is_set():
         if not serialConnection is None:
             data = serialWorker.read(serialConnection)
@@ -93,6 +99,11 @@ def serialToQueue(serialConnection, outputQueue, stopEvent):
             
 
 def checkHardwareResponses(outputQueue, stopEvent):
+    """
+    This function reads from the output queue.
+    :param outputQueue: Queue - a multitasking queue
+    :param stopEvent: a multiprocessing Event - used to tell this process to end.
+    """
     while not stopEvent.is_set():
         accumulator: list[str] = []
         if not outputQueue.empty():
@@ -100,8 +111,10 @@ def checkHardwareResponses(outputQueue, stopEvent):
             accumulator.append(outputQueue.get().decode())
         recievedData: str = ''.join(accumulator)
         repeatedCommands: Optional[str] = Feed.commandsFromSerial(recievedData)
+        #     todo: currently data on the outputQueue is unused.
         time.sleep(THREAD_SLEEP_TIME)
 
+# todo: a keep alive thread.
 
 # def serialCommsThread(conn, messagingQueue, stopEvent):
 #     while not stopEvent.is_set():
@@ -144,6 +157,7 @@ if __name__ == '__main__':
         print("stopping...")
         
     stopEvent.set()
+    
     if serialConn:
         serialConn.close()
     

@@ -10,7 +10,8 @@ class Feed():
     @staticmethod
     def description() -> list[dict[str, Any]]:
         """
-        returns a list of dicts, each dicts describes a device. Used for drawing UI 
+        Used for drawing UI 
+        :return: list[dict[str, Any]] - a list of dicts, each dict describes a device. 
         """
         deviceList = s.getDeviceStates()
         for d in deviceList:
@@ -26,7 +27,11 @@ class Feed():
 
 
     @staticmethod
-    def tree() -> str:
+    def tree() -> dict[str,Any]:
+        """
+        Used for drawing UI
+        :returns: dict[str,Any] - A nested structure starting with the root device, it's children etc.
+        """
         deviceList: list[dict[str, Any]]
         deviceList = Feed.description()
 
@@ -43,20 +48,18 @@ class Feed():
 
         rootDevice: dict[str,Any]
         rootDevice = next(filter(lambda d: d['id'] == s.rootDevice(), deviceList))
-        jsonDescription: str = json.dumps(rootDevice)
-        return jsonDescription
+        return rootDevice
 
 
-
-    @staticmethod
-    def deviceFromID(deviceStates, deviceID):
-        return next(filter(lambda device: device['id'] == deviceID, deviceStates))
 
 #mark _____________________ Command Logic _____________________
     @staticmethod
     def commandsFrom(commandData: str) -> Optional[list[tuple[int,int]]]:
         """
         returned values will be sent to the serial device
+        :param commandData: str - A raw string from the web UI
+        :return: [list[tuple[int,int]] or None.
+        output looks like this [(1,1), (2,0)] meaning turn device 1 on, turn device 2 off...
         """
         
         command: Optional[dict] = Feed._commandFromString(commandData)
@@ -85,12 +88,29 @@ class Feed():
         else:
             return None
             
-        
+    @staticmethod
+    def _commandFromString(data: str) -> Optional[dict]:
+        """
+        Turns a string into a meaningful command to be forwarded to the Arduino
+        :param data: str - a string which may represent a command
+        :return: [dict] - will look like
+            {intent: "toggle" | "updateChannel" | "addDevice" | "removeDevice",
+            deviceID: 1,
+            ...
+            }
+        with additional fields depending on the intent.
+        """
+        try:
+            command: dict = json.loads(data)
+            return command
+        except:
+            return None
+
+
     @staticmethod
     def commandsFromSerial(data: str) -> Optional[list[tuple[int,int]]]:
 #     todo: this will receive the repeated commands from the arduino,
 #     turn the data into commands, and then commit those commands to the database.
-# todo: use the repeated command as confirmation that the command has been followed
 
         if len(data) > 0:
             print(f"Feed got serial data: {data}")
@@ -105,7 +125,9 @@ class Feed():
     @staticmethod
     def _getToggleCommandsFor(command: dict) -> Optional[list[tuple[int,int]]]:
         """
-        Returns: a list of tuples (d,a) where d is the deviceID and a is the activation i.e. on/off
+        :param command: dict - a dict which may describe the intent to toggle a device
+        :return: [list[tuple[int,int]]] -  a list of tuples (d,a) where d is a deviceID and a is the activation i.e. on/off.
+        In general toggling a single device will require switching on or off multiple devices.
         """
         deviceID : int
         activation: int
@@ -135,29 +157,13 @@ class Feed():
         commands = [(channel, activation) for channel in channels]
         return commands
 
- 
-    @staticmethod
-    def _getChannelUpdateCommandFor(commandData: str) -> tuple[int, int]:
-        print(f"updating: {commandData}")
-        deviceAndChannel = commandData.split(",")
-        deviceID: int = int(deviceAndChannel[1])
-        newChannel: int = int(deviceAndChannel[2])
-        return deviceID, newChannel
-
-    @staticmethod
-    def _commandFromString(data: str) -> Optional[dict]:
-        try:
-            command: dict = json.loads(data)
-            return command
-        except:
-            return None
-
 
 #MARK  _____________________ device dependency management _____________________
     @staticmethod
     def _allowedDeviceIDs() -> set[int]:
         """
-        returns the children of currently active devices
+        Rule: only children of active (on) devices are enabled
+        :return: set[Int] - Children of currently active devices
         """
 #       get devices that are currently on
         deviceStates: list[dict[str, Any]]
@@ -181,7 +187,8 @@ class Feed():
     @staticmethod
     def _getAncestorDeviceIDs(deviceID: int) -> list[int]:
         """
-        returns the parents of a given device
+        :param device ID: int - the child device ID
+        :return: list[int] - Ancestors of the given device
         """
         graphRows = s.dependencyGraph()
         deviceIDs: list[int] = [row['parentID'] for row in graphRows]
@@ -203,7 +210,9 @@ class Feed():
     @staticmethod
     def _getDescendantDeviceIDs(deviceID: int, depth: int = None) -> list[int]:
         """
-        returns the children of a given device
+        :param  deviceID: int - the parent device ID
+        :param depth: int - The number of generations to fetch.
+        :return: list[int] the children of a given device
         """
         graphRows = s.dependencyGraph()
         deviceIDs: list[int] = [row['parentID'] for row in graphRows]
