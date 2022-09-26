@@ -127,6 +127,7 @@ def checkHardwareResponses(outputQueue, stopEvent):
 
 
 if __name__ == '__main__':
+
     # get serial port
     try:
         serialConn = serialWorker.getSerialConnection()
@@ -162,3 +163,5 @@ if __name__ == '__main__':
         serialConn.close()
     
     print("finished")
+    
+    
